@@ -1,0 +1,1351 @@
+# --coding: utf-8 --
+import re
+import math
+import hashlib
+import hmac
+import time
+import urllib.request
+import urllib.parse
+import urllib.error
+import http.cookiejar
+import ddddocr
+import ssl
+import json
+from bs4 import BeautifulSoup
+from functools import wraps
+
+
+# 日志
+import logging
+
+logging.basicConfig(format="%(asctime)s %(message)s", datefmt="## %Y-%m-%d %H:%M:%S")
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+# 检查类
+
+def checkvars(varlist, errorinfo):
+    """
+    Decorator to check if variables are defined before running a function.
+    """
+    if isinstance(varlist, str):
+        varlist = [varlist]
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            exist_status = [self._is_defined(var) for var in varlist]
+            assert not any(status is False for status in exist_status), errorinfo
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def infomanage(successinfo=None, errorinfo=None):
+    """
+    Decorator to log information at different stages of function execution.
+    """
+
+    def decorator(func):
+        nonlocal successinfo, errorinfo
+        successinfo = successinfo or f"Successfully called function {func.__name__}"
+        errorinfo = errorinfo or f"Failed to call function {func.__name__}"
+
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            try:
+                result = func(self, *args, **kwargs)
+                logger.info(successinfo)
+                return result
+            except Exception:
+                logger.error(errorinfo)
+                raise
+
+        return wrapper
+
+    return decorator
+
+import time
+import sys
+import re
+import psutil
+import socket
+import subprocess
+
+
+# 网关类
+
+class Mac:
+    def __init__(self):
+        # 获取系统类型
+        self.system = sys.platform
+
+    def get_network_interfaces(self):
+        """
+        获取本机所有物理网卡名称。
+        Returns:
+            list: 网卡名称列表
+        """
+
+        interfaces = []
+
+        if self.system.startswith("win"):
+            result = subprocess.run(
+                "ipconfig", shell=True, capture_output=True, text=True
+            )
+            matches = re.findall(r"adapter (.+):", result.stdout)
+            interfaces = [match.strip() for match in matches]
+        elif self.system.startswith("linux"):
+            result = subprocess.run(
+                "ls /sys/class/net", shell=True, capture_output=True, text=True
+            )
+            interfaces = result.stdout.strip().split("\n")
+        elif self.system == "darwin":  # macOS
+            result = subprocess.run(
+                "networksetup -listallhardwareports",
+                shell=True,
+                capture_output=True,
+                text=True,
+            )
+            matches = re.findall(r"Device: (.+)", result.stdout)
+            interfaces = matches
+        else:
+            logger.warning(f"Unsupported platform: {self.system}")
+            return
+        return interfaces
+
+    def is_interface_reachable(self, target_ip="auth.nyist.edu.cn", source_ip=None):
+        """
+        检查是否可以 ping 通目标 IP 地址。
+        Args:
+            ip (str): 要 ping 的 IP
+        Returns:
+            bool: True 表示可达，False 表示不可达
+        """
+
+        cmd = ["ping", target_ip]
+        if self.system.startswith("win"):
+            cmd += ["-n", "3", "-w", "1000"]  # 次数，超时（毫秒）
+        else:
+            cmd += ["-c", "3", "-W", "2"]  # 次数，超时（秒）
+            if source_ip:
+                cmd += ["-I", source_ip]
+
+        return (
+            subprocess.run(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            ).returncode
+            == 0
+        )
+
+    def get_valid_interfaces(self):
+        """
+        获取所有可用网卡（具有 IPv4 地址）并能 ping 通 `auth.nyist.edu.cn` 的网卡接口和 IP 地址。
+        使用 psutil 跨平台获取网卡信息。
+        返回格式: [(interface, ipv4, ipv6), ...]
+        """
+        valid = []
+        interfaces = psutil.net_if_addrs()
+        for interface, addrs in interfaces.items():
+            ipv4 = ipv6 = None
+
+            for addr in addrs:
+                if addr.family == socket.AF_INET:
+                    ipv4 = addr.address
+                elif addr.family == socket.AF_INET6:
+                    ipv6 = addr.address.split("%")[0]  # 去掉作用域标识
+
+            if ipv4 and self.is_interface_reachable(source_ip=ipv4):
+                valid.append((interface, ipv4, ipv6))
+
+        return valid
+
+    def restart_network_interfaces(self):
+        """
+        重启所有物理网卡
+        """
+        logger.info("Restarting Network Interfaces...")
+
+        try:
+            self.interface_list = self.get_network_interfaces()
+            if self.system.startswith("win"):
+                for iface in self.interface_list:
+                    subprocess.run(
+                        [
+                            "netsh",
+                            "interface",
+                            "set",
+                            "interface",
+                            iface,
+                            "admin=disable",
+                        ],
+                        check=False,
+                    )
+                    subprocess.run(
+                        [
+                            "netsh",
+                            "interface",
+                            "set",
+                            "interface",
+                            iface,
+                            "admin=enable",
+                        ],
+                        check=False,
+                    )
+            elif self.system.startswith("linux"):
+                subprocess.run(["systemctl", "restart", "NetworkManager"], check=False)
+                for iface in self.interface_list:
+                    subprocess.run(
+                        ["ip", "link", "set", "dev", iface, "down"], check=False
+                    )
+                    subprocess.run(
+                        ["ip", "link", "set", "dev", iface, "up"], check=False
+                    )
+            elif self.system == "darwin":
+                for iface in self.interface_list:
+                    subprocess.run(["ifconfig", iface, "down"], check=False)
+                    subprocess.run(["ifconfig", iface, "up"], check=False)
+
+            else:
+                logger.warning(f"Unsupported platform: {self.system}")
+                return
+
+            logger.info("Network interfaces restarted successfully.")
+            time.sleep(15)  # Allow network to stabilize
+
+        except Exception as e:
+            return
+
+
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+
+# 邮箱类
+
+class Email:
+    def __init__(self):
+        pass
+
+    def send_email(self, subject, body, email_config):
+        """
+        发送邮件
+        """
+        try:
+            email_send = email_config["email_send"]
+
+            if email_send == "true":
+                try:
+                    recipients = [e.strip() for e in email_config["email_to"].split(",")]
+
+                    msg = MIMEText(body, "plain", "utf-8")
+                    msg["From"] = email_config["email_account"]
+                    msg["To"] = ", ".join(recipients)
+                    msg["Subject"] = Header(subject, "utf-8")
+
+                    with smtplib.SMTP_SSL(
+                        email_config["smtp_server"], email_config["smtp_port"]
+                    ) as server:
+                        server.login(
+                            email_config["email_account"], email_config["email_pass"]
+                        )
+                        server.sendmail(
+                            email_config["email_account"], recipients, msg.as_string()
+                        )
+
+                    logger.info(f"Email sent to {len(recipients)} recipients: {subject}")
+                except Exception as e:
+                    logger.error(f"Failed to send email: {e}")
+            else:
+                logger.info(body)
+        except Exception as e:
+            logger.error(f"Failed to deal email config: {e}")
+
+
+import re
+import math
+import hashlib
+import hmac
+import time
+import urllib.request
+import urllib.parse
+import urllib.error
+import http.cookiejar
+import ddddocr
+import ssl
+import json
+from bs4 import BeautifulSoup
+
+
+# 校园网类
+
+class NetworkManager:
+
+    def __init__(self, ip=None):
+        # urls
+        server_format = "https://auth.nyist.edu.cn"
+        self.url_login_page = server_format + "/srun_portal_pc?ac_id=1&theme=pro"
+        self.url_get_challenge_api = server_format + "/cgi-bin/get_challenge"
+        self.url_login_api = server_format + "/cgi-bin/srun_portal"
+        self.url_online_api = server_format + "/cgi-bin/rad_user_info"
+        self.url_home_login_page = server_format + ":8800/login"
+        self.url_home_page = server_format + ":8800/home"
+        self.url_captcha_api = server_format + ":8800/site/captcha?refresh=1"
+        self.base_url = server_format + ":8800"
+
+        self.header = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.26 Safari/537.36",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+        }
+
+        # static parameters
+        self.n = "200"
+        self.vtype = "1"
+        self.ac_id = "1"
+        self.enc = "srun_bx1"
+        self._PADCHAR = "="
+        self._ALPHA = "LVoJPiCN2R8G90yg+hmFHuacZ1OWMnrsSTXkYpUq/3dlbfKwv6xztjI7DeBE45QA"
+
+        # login ip
+        self.ip = ip
+        if not self.ip:
+            self.get_ip()
+
+        # login and ocr max attempts
+        self.ocr_max_attempts = 5
+        self.login_max_attempts = 5
+
+        self.cookie_jar = http.cookiejar.CookieJar()
+
+        # Create SSL context and add to handler
+        self.ctx = ssl.create_default_context()
+        self.ctx.check_hostname = False
+        self.ctx.verify_mode = ssl.CERT_NONE
+        https_handler = urllib.request.HTTPSHandler(context=self.ctx)
+
+        # Create opener and add cookie handling
+        self.opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(self.cookie_jar), https_handler
+        )
+        self.opener.addheaders = [("User-Agent", "Mozilla/5.0")]
+
+        self.csrf_token = None
+
+
+
+        # User-related attributes
+        self.username = None
+        self.password = None
+
+    def list(self, username, password):
+        self.username = username
+        self.password = password
+
+        try:
+            list_info = self._get_home_page_data()
+            logger.info(f"{self.username}@{self.ip} [List Info]: {list_info}")
+            return list_info
+        except Exception as e:
+            logger.error(f"{self.username}@{self.ip} [List failed]: {str(e)}")
+            raise
+
+    def login(self, username, password):
+        self.username = username
+        self.password = password
+
+        try:
+            if not self.get_check_response():
+                self.get_token()
+                self.get_login_response()
+                result = self._login_response_text
+                logger.info(f"{self.username}@{self.ip} [Login Info]: {result}")
+                return result
+            return "already_online"
+        except Exception as e:
+            logger.error(f"{self.username}@{self.ip} [Login failed]: {str(e)}")
+            raise
+
+    def logout(self, username):
+        self.username = username
+
+        try:
+            if self.get_check_response():
+                self.get_logout_response()
+                result = self._logout_response_text
+                logger.info(f"{self.username}@{self.ip} [Logout Info]: {result}")
+                return result
+            return "not_online"
+        except Exception as e:
+            logger.error(f"{self.username}@{self.ip} [Logout failed]: {str(e)}")
+            raise
+
+    def check(self, username):
+        self.username = username
+
+        try:
+            check_info = self.get_check_response()
+            if not check_info:
+                check_info = "not_online"
+
+            logger.info(f"{self.username}@{self.ip} [Check Info]: {check_info}")
+            return check_info
+        except Exception as e:
+            logger.error(f"{self.username}@{self.ip} [Check failed]: {str(e)}")
+            raise
+
+    def get_ip(self):
+        self._get_login_page()
+        self._resolve_ip_from_login_page()
+
+    def get_token(self):
+        logger.info("Step 1: Getting login token")
+        try:
+            self._get_challenge()
+            self._resolve_token_from_challenge_response()
+            return self.token
+        except Exception as e:
+            raise
+
+    def get_login_response(self):
+        logger.info("Step 2: Login and parse response")
+        try:
+            self._generate_encrypted_login_info()
+            self._send_login_info()
+            self._resolve_login_response()
+            logger.info(f"Login result: {self._login_response_text}")
+            return self._login_response_text
+        except Exception as e:
+            raise
+
+    def get_logout_response(self):
+        try:
+            self._send_logout_info()
+            self._resolve_logout_response()
+            return self._logout_response_text
+        except Exception as e:
+            raise
+
+    def get_check_response(self):
+        try:
+            return self._send_check_info()
+        except Exception as e:
+            return None
+
+    @infomanage(
+        successinfo="Successfully get login page",
+        errorinfo="Failed to get login page, maybe the login page url is not correct",
+    )
+    def _get_login_page(self):
+        req = urllib.request.Request(self.url_login_page, headers=self.header)
+        with urllib.request.urlopen(req) as resp:
+            self._page_response_text = resp.read().decode("utf-8")
+
+    @checkvars(
+        varlist="_page_response_text",
+        errorinfo="Lack of login page html. Need to run '_get_login_page' in advance to get it",
+    )
+    @infomanage(
+        successinfo="Successfully resolve IP",
+        errorinfo="Failed to resolve IP",
+    )
+    def _resolve_ip_from_login_page(self):
+        self.ip = re.search(
+            r'ip\s*:\s*["\'](.*?)["\']', self._page_response_text
+        ).group(1)
+
+    @checkvars(
+        varlist="ip",
+        errorinfo="Lack of local IP. Need to run '_resolve_ip_from_login_page' in advance to get it",
+    )
+    @infomanage(
+        successinfo="Challenge response successfully received",
+        errorinfo="Failed to get challenge response, maybe the url_get_challenge_api is not correct."
+        "Else check params_get_challenge",
+    )
+    def _get_challenge(self):
+        """
+        The 'get_challenge' request aims to ask the server to generate a token
+        """
+        params_get_challenge = {
+            "callback": self.generate_jsonp_string(),  # This value can be any string, but cannot be absent
+            "username": self.username,
+            "ip": self.ip,
+        }
+        query_string = urllib.parse.urlencode(params_get_challenge)
+        url = f"{self.url_get_challenge_api}?{query_string}"
+
+        req = urllib.request.Request(url, headers=self.header)
+        with urllib.request.urlopen(req) as resp:
+            self._challenge_response_text = resp.read().decode("utf-8")
+
+    @checkvars(
+        varlist="_challenge_response_text",
+        errorinfo="Lack of challenge response. Need to run '_get_challenge' in advance",
+    )
+    @infomanage(
+        successinfo="Successfully resolve token",
+        errorinfo="Failed to resolve token",
+    )
+    def _resolve_token_from_challenge_response(self):
+        self.token = re.search(
+            '"challenge":"(.*?)"', self._challenge_response_text
+        ).group(1)
+
+    @checkvars(
+        varlist="ip",
+        errorinfo="Lack of local IP. Need to run '_resolve_ip_from_login_page' in advance to get it",
+    )
+    def _generate_info(self):
+        info_params = {
+            "username": self.username,
+            "password": self.password,
+            "ip": self.ip,
+            "acid": self.ac_id,
+            "enc_ver": self.enc,
+        }
+        info = re.sub("'", '"', str(info_params))
+        self.info = re.sub(" ", "", info)
+
+    @checkvars(
+        varlist="info",
+        errorinfo="Lack of info. Need to run '_generate_info' in advance",
+    )
+    @checkvars(
+        varlist="token",
+        errorinfo="Lack of token. Need to run '_resolve_token_from_challenge_response' in advance",
+    )
+    def _encrypt_info(self):
+        self.encrypted_info = "{SRBX1}" + self.get_base64(
+            self.get_xencode(self.info, self.token)
+        )
+
+    @checkvars(
+        varlist="token",
+        errorinfo="Lack of token. Need to run '_resolve_token_from_challenge_response' in advance",
+    )
+    def _generate_md5(self):
+        self.md5 = self.get_md5("", self.token)
+
+    @checkvars(
+        varlist="md5", errorinfo="Lack of md5. Need to run '_generate_md5' in advance"
+    )
+    def _encrypt_md5(self):
+        self.encrypted_md5 = "{MD5}" + self.md5
+
+    @checkvars(
+        varlist="token",
+        errorinfo="Lack of token. Need to run '_resolve_token_from_challenge_response' in advance",
+    )
+    @checkvars(
+        varlist="ip",
+        errorinfo="Lack of local IP. Need to run '_resolve_ip_from_login_page' in advance to get it",
+    )
+    @checkvars(
+        varlist="encrypted_info",
+        errorinfo="Lack of encrypted_info. Need to run '_encrypt_info' in advance",
+    )
+    def _generate_chksum(self):
+        self.chkstr = self.token + self.username
+        self.chkstr += self.token + self.md5
+        self.chkstr += self.token + self.ac_id
+        self.chkstr += self.token + self.ip
+        self.chkstr += self.token + self.n
+        self.chkstr += self.token + self.vtype
+        self.chkstr += self.token + self.encrypted_info
+
+    @checkvars(
+        varlist="chkstr",
+        errorinfo="Lack of chkstr. Need to run '_generate_chksum' in advance",
+    )
+    def _encrypt_chksum(self):
+        self.encrypted_chkstr = self.get_sha1(self.chkstr)
+
+    def _generate_encrypted_login_info(self):
+        self._generate_info()
+        self._encrypt_info()
+        self._generate_md5()
+        self._encrypt_md5()
+
+        self._generate_chksum()
+        self._encrypt_chksum()
+
+    @checkvars(
+        varlist="ip",
+        errorinfo="Lack of local IP. Need to run '_resolve_ip_from_login_page' in advance to get it",
+    )
+    @checkvars(
+        varlist="encrypted_md5",
+        errorinfo="Lack of encrypted_md5. Need to run '_encrypt_md5' in advance",
+    )
+    @checkvars(
+        varlist="encrypted_info",
+        errorinfo="Lack of encrypted_info. Need to run '_encrypt_info' in advance",
+    )
+    @checkvars(
+        varlist="encrypted_chkstr",
+        errorinfo="Lack of encrypted_chkstr. Need to run '_encrypt_chksum' in advance",
+    )
+    @infomanage(
+        successinfo="Login info send successfully",
+        errorinfo="Failed to send login info",
+    )
+    def _send_login_info(self):
+        login_info_params = {
+            "callback": self.generate_jsonp_string(),  # This value can be any string, but cannot be absent
+            "action": "login",
+            "username": self.username,
+            "password": self.encrypted_md5,
+            "ac_id": self.ac_id,
+            "ip": self.ip,
+            "info": self.encrypted_info,
+            "chksum": self.encrypted_chkstr,
+            "n": self.n,
+            "type": self.vtype,
+        }
+        query_string = urllib.parse.urlencode(login_info_params)
+        url = f"{self.url_login_api}?{query_string}"
+
+        req = urllib.request.Request(url, headers=self.header)
+        with urllib.request.urlopen(req) as resp:
+            self._login_responce_text = resp.read().decode("utf-8")
+
+    @infomanage(
+        successinfo="Logout info send successfully",
+        errorinfo="Failed to send logout info",
+    )
+    def _send_logout_info(self):
+        payload = {
+            "action": "logout",
+            "ac_id": 1,
+            "username": self.username,
+            "type": 2,
+            "ip": self.ip,
+        }
+        data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(self.url_login_api, data=data, headers=self.header)
+        with urllib.request.urlopen(req) as resp:
+            self._logout_responce_text = resp.read().decode("utf-8")
+            self._resolve_logout_response()
+
+    @infomanage(
+        successinfo="Check info send successfully",
+        errorinfo="Failed to send check info",
+    )
+    def _send_check_info(self):
+        try:
+            payload = {
+                "ip": self.ip,
+                "ac_id": 1,
+            }
+            data = urllib.parse.urlencode(payload).encode("utf-8")
+
+            req = urllib.request.Request(
+                self.url_online_api, data=data, headers=self.header
+            )
+            with urllib.request.urlopen(req) as resp:
+                resp_text = resp.read().decode("utf-8")
+
+            if "not_online" in resp_text:
+                return None
+
+            # Parse JSON response
+            data = json.loads(resp_text)
+
+            # Confirm response success
+            if data.get("error") != "ok":
+                return None
+
+            online_info = {
+                "username": data.get("user_name"),
+                "ipv4": data.get("online_ip"),
+                "ipv6": data.get("online_ip6"),
+                "login_time": self.time2date(data.get("add_time")),
+                "now_time": self.time2date(data.get("keepalive_time")),
+                "used_bytes": self.humanable_bytes(data.get("sum_bytes")),
+                "used_second": self.humanable_seconds(data.get("sum_seconds")),
+                "remain_bytes": (
+                    -1
+                    if data.get("remain_bytes") == 0
+                    else self.humanable_bytes(data.get("remain_bytes"))
+                ),
+                "remain_second": (
+                    -1
+                    if data.get("remain_seconds") == 0
+                    else self.humanable_seconds(data.get("remain_seconds"))
+                ),
+                "balance": data.get("user_balance"),
+            }
+
+            return online_info
+        except Exception as e:
+            return None
+
+    @checkvars(
+        varlist="_login_responce_text",
+        errorinfo="Need _login_responce_text. Run _send_login_info in advance",
+    )
+    @infomanage(
+        successinfo="Login result successfully resolved",
+        errorinfo="Cannot resolve login result. Maybe the srun response format is changed",
+    )
+    def _resolve_login_response(self):
+        """Parse login response information"""
+        logger.info("Login response: " + self._login_responce_text)
+        match = re.search('"suc_msg":"(.*?)"', self._login_responce_text)
+
+        if match:
+            self._login_response_text = match.group(1)
+        else:
+            self._login_response_text = re.search(
+                '"error_msg":"(.*?)"', self._login_responce_text
+            ).group(1)
+
+    @checkvars(
+        varlist="_logout_responce_text",
+        errorinfo="Need _logout_responce_text. Run _send_logout_info in advance",
+    )
+    @infomanage(
+        successinfo="Logout result successfully resolved",
+        errorinfo="Cannot resolve logout result. Maybe the srun response format is changed",
+    )
+    def _resolve_logout_response(self):
+        """Parse logout response information"""
+        logger.info("Logout response: " + self._logout_responce_text)
+        match = re.search('"res":"(.*?)"', self._logout_responce_text)
+
+        if match:
+            self._logout_response_text = "logout_" + match.group(1)
+        else:
+            self._logout_response_text = re.search(
+                '"error_msg":"(.*?)"', self._logout_responce_text
+            ).group(1)
+
+    @infomanage(
+        successinfo="CSRF token obtained successfully",
+        errorinfo="Failed to obtain CSRF token",
+    )
+    def get_csrf_token(self):
+        # Directly use opener to open URL
+        request = urllib.request.Request(self.url_home_login_page)
+
+        try:
+            response = self.opener.open(request)
+            content = response.read()
+
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                logger.warning(
+                    f"Unable to decode response as UTF-8 from {self.url_home_login_page}"
+                )
+                raise Exception("Unable to decode login page content")
+
+            csrf_match = re.search(
+                r'<input type="hidden" name="_csrf-8800" value="([^"]+)"', text
+            )
+            if csrf_match:
+                self.csrf_token = csrf_match.group(1)
+            else:
+                raise Exception("CSRF token not found")
+        except Exception as e:
+            raise
+
+    @checkvars(
+        varlist="csrf_token",
+        errorinfo="Missing CSRF token, cannot get captcha",
+    )
+    @infomanage(
+        successinfo="Captcha obtained successfully",
+        errorinfo="Failed to obtain captcha",
+    )
+    def get_captcha(self):
+        headers = {
+            **self.header,
+            "Referer": self.url_home_login_page,
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRF-Token": self.csrf_token,
+        }
+
+        for _ in range(self.ocr_max_attempts):
+            try:
+                timestamp = int(time.time() * 1000)
+                captcha_url = "{}_{:d}".format(self.url_captcha_api + "&", timestamp)
+
+                # Get captcha JSON data
+                request = urllib.request.Request(captcha_url)
+                for key, value in headers.items():
+                    request.add_header(key, value)
+
+                captcha_response = self.opener.open(request)
+                captcha_content = captcha_response.read()
+
+                try:
+                    captcha_data = json.loads(captcha_content.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                    logger.warning(f"Failed to decode captcha response: {str(e)}")
+                    continue
+
+                if "url" not in captcha_data:
+                    logger.warning("Unable to get captcha URL")
+                    continue
+
+                captcha_img_url = "{}{url}".format(self.base_url, **captcha_data)
+                logger.info(f"Captcha image URL: {captcha_img_url}")
+
+                # Download captcha image
+                img_request = urllib.request.Request(captcha_img_url)
+                img_request.add_header("Referer", self.url_home_login_page)
+
+                img_response = self.opener.open(img_request)
+                img_data = img_response.read()
+
+                # Use ddddocr to recognize captcha
+                self.ocr = ddddocr.DdddOcr()
+                verify_code = self.ocr.classification(img_data)
+                logger.info(f"Captcha recognized: {verify_code}")
+
+                if len(verify_code) == 4:
+                    return verify_code
+            except Exception as e:
+                continue
+
+        return None
+
+    @checkvars(
+        varlist="csrf_token",
+        errorinfo="Missing CSRF token, cannot login to home page",
+    )
+    @infomanage(
+        successinfo="Login Home page successful",
+        errorinfo="Login Home page failed",
+    )
+    def _get_home_page(self):
+        self.get_csrf_token()
+        verify_code = self.get_captcha()
+        if not verify_code:
+            raise Exception("Failed to get captcha")
+
+        data = {
+            "_csrf-8800": self.csrf_token,
+            "LoginForm[username]": self.username,
+            "LoginForm[password]": self.password,
+            "LoginForm[verifyCode]": verify_code,
+            "login-button": "",
+        }
+
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        # 将数据编码
+        encoded_data = urllib.parse.urlencode(data).encode("utf-8")
+
+        # 创建POST请求
+        request = urllib.request.Request(
+            self.url_home_login_page, data=encoded_data, method="POST"
+        )
+        for key, value in headers.items():
+            request.add_header(key, value)
+
+        try:
+            response = self.opener.open(request)
+            response_url = response.geturl()
+
+            # 检查是否有重定向（登录成功的标志）
+            if response_url != self.url_home_login_page:
+                logger.info("Login Home page successful")
+
+                # 获取home页面内容
+                home_request = urllib.request.Request(self.url_home_page)
+                home_response = self.opener.open(home_request)
+                home_content = home_response.read()
+
+                try:
+                    self._page_response_text = home_content.decode("utf-8")
+                except UnicodeDecodeError:
+                    raise Exception("Unable to decode home page content")
+            else:
+                raise Exception("Login failed - no redirect to home page")
+        except Exception as e:
+            raise
+
+    @infomanage(
+        successinfo="Home page data retrieved successfully",
+        errorinfo="Failed to retrieve home page data",
+    )
+    def _get_home_page_data(self):
+        for _ in range(self.login_max_attempts):
+            try:
+                self._get_home_page()
+                table_data = self._extract_tbody_text()
+                if table_data:
+                    return table_data
+            except Exception as e:
+                continue
+
+        raise Exception("Failed to get home page data after multiple attempts")
+
+    @infomanage(
+        successinfo="Table data extraction successful",
+        errorinfo="Table data extraction failed",
+    )
+    @checkvars(
+        varlist="_page_response_text",
+        errorinfo="Missing _page_response_text, cannot extract table data",
+    )
+    def _extract_tbody_text(self):
+        soup = BeautifulSoup(self._page_response_text, "html.parser")
+
+        user_info = {}
+        list_items = soup.find_all("li", class_="list-group-item")
+
+        for item in list_items:
+            label = item.find("label", class_="list-group-label")
+            if not label:
+                continue
+
+            label_text = label.text.strip()
+            value = item.text.replace(label.text, "").strip()
+
+            if "Name" in label_text or "姓名" in label_text:
+                user_info["name"] = value
+            elif "E-Wallet" in label_text or "电子钱包" in label_text:
+                user_info["balance"] = value
+            elif "Status" in label_text or "状态" in label_text:
+                user_info["status"] = value
+            elif "Username" in label_text or "用户名" in label_text:
+                user_info["user_id"] = value
+
+        tbody = soup.find("tbody")
+        online_devices = []
+
+        if tbody:
+            for row in tbody.find_all("tr"):
+                cells = [
+                    cell.get_text(strip=True) for cell in row.find_all(["td", "th"])
+                ]
+                if cells and len(cells) >= 6:
+                    device = {
+                        "ipv4": cells[0],
+                        "login_time": cells[1],
+                        "used_bytes": cells[2],
+                        "used_second": cells[3],
+                        "device": cells[4],
+                        "system": cells[5],
+                    }
+                    online_devices.append(device)
+
+        return {
+            "username": self.username,
+            "realname": user_info.get("name", ""),
+            "purse": user_info.get("purse", ""),
+            "status": user_info.get("status", ""),
+            "online_info": online_devices,
+        }
+
+    def _getbyte(self, s, i):
+        x = ord(s[i])
+        if x > 255:
+            raise ValueError("INVALID_CHARACTER_ERR: DOM Exception 5")
+        return x
+
+    def get_base64(self, s):
+        if not s:
+            return ""
+
+        i = 0
+        b10 = 0
+        x = []
+        imax = len(s) - len(s) % 3
+
+        while i < imax:
+            b10 = (
+                (self._getbyte(s, i) << 16)
+                | (self._getbyte(s, i + 1) << 8)
+                | self._getbyte(s, i + 2)
+            )
+            x.append(self._ALPHA[(b10 >> 18) & 63])
+            x.append(self._ALPHA[(b10 >> 12) & 63])
+            x.append(self._ALPHA[(b10 >> 6) & 63])
+            x.append(self._ALPHA[b10 & 63])
+            i += 3
+
+        if len(s) - imax == 1:
+            b10 = self._getbyte(s, i) << 16
+            x.append(self._ALPHA[(b10 >> 18) & 63])
+            x.append(self._ALPHA[(b10 >> 12) & 63])
+            x.append(self._PADCHAR)
+            x.append(self._PADCHAR)
+        elif len(s) - imax == 2:
+            b10 = (self._getbyte(s, i) << 16) | (self._getbyte(s, i + 1) << 8)
+            x.append(self._ALPHA[(b10 >> 18) & 63])
+            x.append(self._ALPHA[(b10 >> 12) & 63])
+            x.append(self._ALPHA[(b10 >> 6) & 63])
+            x.append(self._PADCHAR)
+
+        return "".join(x)
+
+    def get_md5(self, password, token):
+        return hmac.new(token.encode(), password.encode(), hashlib.md5).hexdigest()
+
+    def get_sha1(self, value):
+        return hashlib.sha1(value.encode()).hexdigest()
+
+    def force(self, msg):
+        return bytes(ord(w) for w in msg)
+
+    def ordat(self, msg, idx):
+        return ord(msg[idx]) if idx < len(msg) else 0
+
+    def sencode(self, msg, key):
+        l = len(msg)
+        pwd = []
+        for i in range(0, l, 4):
+            pwd.append(
+                self.ordat(msg, i)
+                | (self.ordat(msg, i + 1) << 8)
+                | (self.ordat(msg, i + 2) << 16)
+                | (self.ordat(msg, i + 3) << 24)
+            )
+        if key:
+            pwd.append(l)
+        return pwd
+
+    def lencode(self, msg, key):
+        l = len(msg)
+        ll = (l - 1) << 2
+        if key:
+            m = msg[l - 1]
+            if m < ll - 3 or m > ll:
+                raise ValueError("Invalid length in lencode")
+            ll = m
+        result = []
+        for i in range(l):
+            result.append(
+                chr(msg[i] & 0xFF)
+                + chr((msg[i] >> 8) & 0xFF)
+                + chr((msg[i] >> 16) & 0xFF)
+                + chr((msg[i] >> 24) & 0xFF)
+            )
+        return "".join(result)[:ll] if key else "".join(result)
+
+    def get_xencode(self, msg, key):
+        if not msg:
+            return ""
+
+        pwd = self.sencode(msg, True)
+        pwdk = self.sencode(key, False)
+        if len(pwdk) < 4:
+            pwdk += [0] * (4 - len(pwdk))
+
+        n = len(pwd) - 1
+        z = pwd[n]
+        y = pwd[0]
+        c = 0x86014019 | 0x183639A0
+        q = math.floor(6 + 52 / (n + 1))
+        d = 0
+
+        while q > 0:
+            q -= 1
+            d = (d + c) & (0x8CE0D9BF | 0x731F2640)
+            e = (d >> 2) & 3
+            for p in range(n):
+                y = pwd[p + 1]
+                m = ((z >> 5) ^ (y << 2)) + (((y >> 3) ^ (z << 4)) ^ (d ^ y))
+                m += pwdk[(p & 3) ^ e] ^ z
+                pwd[p] = (pwd[p] + m) & (0xEFB8D130 | 0x10472ECF)
+                z = pwd[p]
+            y = pwd[0]
+            m = ((z >> 5) ^ (y << 2)) + (((y >> 3) ^ (z << 4)) ^ (d ^ y))
+            m += pwdk[(n & 3) ^ e] ^ z
+            pwd[n] = (pwd[n] + m) & (0xBB390742 | 0x44C6F8BD)
+            z = pwd[n]
+
+        return self.lencode(pwd, False)
+
+    def generate_jsonp_string(self):
+        return f"nyist{str(int(time.time() * 1000))}"
+
+    def time2date(self, timestamp):
+        time_arry = time.localtime(int(timestamp))
+        return time.strftime("%Y-%m-%d %H:%M:%S", time_arry)
+
+    def humanable_bytes(self, num_byte):
+        num_byte = float(num_byte)
+        if num_byte >= 1024**3:
+            return "{:.3f}G".format(num_byte / (1024**3))
+        elif num_byte >= 1024**2:
+            return "{:.3f}M".format(num_byte / (1024**2))
+        elif num_byte >= 1024:
+            return "{:.3f}K".format(num_byte / 1024)
+        else:
+            return "{:.3f}B".format(num_byte)
+
+    def humanable_seconds(self, seconds):
+        seconds = int(seconds)
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        return f"{hours}时{minutes}分{secs}秒"
+
+    def _is_defined(self, varname):
+        """
+        Check whether variable is defined in the object
+        """
+        allvars = vars(self)
+        return varname in allvars
+
+
+import configparser
+import argparse
+import sys
+import time
+
+
+class HeartBeat:
+
+    def __init__(self, config_file="setting.ini"):
+        # 获取系统类型
+        self.system = sys.platform
+        # 配置文件路径
+        self.config_file = config_file
+        # 初始化
+        self._init()
+
+    def load_config(self, config_file):
+        config = configparser.ConfigParser()
+        config.read(config_file)
+
+        # 确保所有必需的节存在
+        default_config = {
+            "ACCOUNT": {
+                "username": "***",
+                "passwd": "***",
+                "ip": None,
+            },
+            "IP": {
+                "ipv4": "***",
+                "ipv6": "***",
+                "last_online_time": "***",
+                "is_online": "0",
+            },
+            "EMAIL": {
+                "email_send": "false",
+                "smtp_server": "smtp.qq.com",
+                "smtp_port": "465",
+                "email_account": "***",
+                "email_pass": "***",
+                "email_to": "***",
+            },
+        }
+
+        # 检查并创建缺失的节和键
+        modified = False
+        for section, keys in default_config.items():
+            if section not in config:
+                config.add_section(section)
+                modified = True
+
+            for key, value in keys.items():
+                if section in config and key not in config[section]:
+                    config[section][key] = str(value) if value is not None else ""
+                    modified = True
+
+        # 如果配置文件被修改，保存更新
+        if modified:
+            with open(config_file, "w") as f:
+                config.write(f)
+
+        sections = set(config.sections())
+        return {section: dict(config.items(section)) for section in sections}
+
+    def update_config(self, section, key, value):
+        config = configparser.ConfigParser()
+        config.read(self.config_file)
+        if section not in config:
+            config.add_section(section)
+        config[section][key] = value
+        with open(self.config_file, "w") as f:
+            config.write(f)
+
+    def _init(self):
+        self.config = self.load_config(self.config_file)
+
+        # 账号配置
+        account_config = self.config["ACCOUNT"]
+        self.ip = account_config.get("ip", None)  # 登录ip
+        self.username = account_config["username"]  # 登录用户名
+        self.password = account_config["passwd"]  # 登录密码
+
+        # 邮箱配置
+        self.email_config = self.config["EMAIL"]
+
+        # IP 配置
+        self.ip_config = self.config["IP"]
+
+        # 确保IP配置中有is_online字段
+        if "is_online" not in self.ip_config:
+            self.update_config("IP", "is_online", "0")
+            self.ip_config["is_online"] = "0"
+
+        self.mac = Mac()
+        self.email = Email()
+
+        # 校园网登录实例
+        self.network_manager = NetworkManager(ip=self.ip)
+        self.ip = self.network_manager.ip
+
+    def try_list(self):
+        return self.network_manager.list(self.username, self.password)
+
+    def try_login(self):
+        return self.network_manager.login(self.username, self.password)
+
+    def try_logout(self):
+        return self.network_manager.logout(self.username)
+
+    def try_check(self):
+        return self.network_manager.check(self.username)
+
+    def try_guard(self):
+        while True:
+            # 刷新配置
+            self._init()
+            self.is_online = self.ip_config.get("is_online", "0")
+
+            # 检查网络连接状态
+            online_status = self.network_manager.check(self.username)
+
+            if online_status == "not_online":
+                # 可选：重启网卡
+                # self.mac.restart_network_interfaces()
+
+                # 尝试重新登录
+                self.try_login()
+
+                # 更新状态为离线
+                self.update_config("IP", "is_online", "0")
+                continue
+
+            # --- 处理在线状态 ---
+            # 获取当前IP地址
+            current_ipv4 = online_status.get("ipv4", "")
+            current_ipv6 = online_status.get("ipv6", "")
+            if current_ipv6 == "::":
+                current_ipv6 = None
+
+            # 检查IP地址是否变更并更新
+            ip_changed = False
+            if current_ipv4 and self.ip_config.get("ipv4", "") != current_ipv4:
+                self.update_config("IP", "ipv4", current_ipv4)
+                ip_changed = True
+
+            if current_ipv6 and self.ip_config.get("ipv6", "") != current_ipv6:
+                self.update_config("IP", "ipv6", current_ipv6)
+                ip_changed = True
+
+            # 如果IP变更，发送通知
+            if ip_changed:
+                self.email.send_email(
+                    f"📡 服务器 IP地址变更",
+                    f"新 IP 信息如下：\n{current_ipv4}\n{current_ipv6}",
+                    self.email_config,
+                )
+
+            # 如果之前是离线状态，处理恢复上线
+            if self.is_online == "0":
+                last_online_time = self.ip_config.get("last_online_time", "")
+                offline_duration_str = "无"
+                minutes_offline = 0
+
+                try:
+                    # 转换时间并计算时长
+                    offline_seconds = time.time() - time.mktime(
+                        time.strptime(last_online_time, "%Y-%m-%d %H:%M:%S")
+                    )
+
+                    # 计算小时、分钟、秒
+                    hours, remainder = divmod(offline_seconds, 3600)
+                    minutes, seconds = divmod(remainder, 60)
+
+                    minutes_offline = int(minutes)
+                    offline_duration_str = (
+                        f"{int(hours)}小时{int(minutes)}分钟{int(seconds)}秒"
+                    )
+
+                except Exception as e:
+                    self.update_config("IP", "last_online_time", "")
+                    logger.error(f"计算离线时长出错: {e}")
+
+                # 仅当离线超过1分钟时发送通知
+                if minutes_offline > 1:
+                    self.email.send_email(
+                        "✅ 服务器恢复上线",
+                        f"""服务器上次在线时间：{last_online_time}
+                        断网时长：{offline_duration_str}
+                        网络连接已恢复，现在的IP地址信息如下：
+                        {self.ip_config.get('ipv4', '')}
+                        {self.ip_config.get('ipv6', '')}""",
+                        self.email_config,
+                    )
+                    logger.info(
+                        f"Last Online Time：{last_online_time}，Offline Duration：{offline_duration_str}"
+                    )
+
+            # 更新状态为在线
+            self.update_config("IP", "is_online", "1")
+            # 更新上次在线时间
+            self.update_config(
+                "IP", "last_online_time", time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="NYIST ONLINE TOOL",
+        epilog="Example: python server.py --option list --config_file setting.ini",
+    )
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        default="setting.ini",
+        help="Path to the configuration file. Default is 'setting.ini'.",
+    )
+    parser.add_argument(
+        "--option",
+        type=str,
+        choices=["list", "guard", "login", "logout", "check"],
+        default="list",
+        help=(
+            "Operation to perform: Default is 'list'"
+            "'list' to list online info."
+            "'login' to log in, "
+            "'logout' to log out, "
+            "'check' to verify online status, "
+            "'guard' to guard online, "
+        ),
+    )
+
+    args = parser.parse_args()
+
+    heartbeat = HeartBeat(config_file=args.config_file)
+
+    operations = {
+        "list": lambda: print(
+            f"{heartbeat.username}@{heartbeat.ip} [List_Info]: {heartbeat.try_list()}"
+        ),
+        "login": lambda: print(
+            f"{heartbeat.username}@{heartbeat.ip} [Login_Info]: {heartbeat.try_login()}"
+        ),
+        "logout": lambda: print(
+            f"{heartbeat.username}@{heartbeat.ip} [Logout_Info]: {heartbeat.try_logout()}"
+        ),
+        "check": lambda: print(
+            f"{heartbeat.username}@{heartbeat.ip} [Check_Info]: {heartbeat.try_check()}"
+        ),
+        "guard": lambda: heartbeat.try_guard(),
+    }
+
+    operations[args.option]()
