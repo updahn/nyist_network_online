@@ -1,0 +1,1997 @@
+{% extends "base.html" %} {% block content %}
+<link rel="stylesheet" href="{{ PRE_URL }}/static/css/admin.css" />
+
+<div class="card" style="width: 100%">
+  <h2 class="card-title">后台管理</h2>
+
+  <div class="tabs">
+    <div class="tab-header">
+      {% if current_user.is_admin %}
+      <div class="tab active" data-tab="users">用户管理</div>
+      <div class="tab" data-tab="devices">设备管理</div>
+      {% endif %}
+      <div class="tab {% if not current_user.is_admin %}active{% endif %}" data-tab="network-accounts">校园网账号管理</div>
+    </div>
+
+    <div class="tab-content">
+      {% if current_user.is_admin %}
+      <!-- 用户管理 -->
+      <div class="tab-pane active" id="users">
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 5px">
+          <button class="btn-refresh-table" data-table="users" title="刷新" style="font-size: 24px; background: none; border: none; cursor: pointer; margin-right: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center">⟳</button>
+        </div>
+        <!-- 添加加载状态显示 -->
+        <div class="table-loading" id="users-loading" style="display: none">
+          <div class="spinner"></div>
+          <p>正在加载数据...</p>
+        </div>
+        <div class="table-container">
+          <table class="table" id="users-table">
+            <thead>
+              <tr>
+                <th data-sort="id" class="sortable">ID <span class="sort-icon">⇅</span></th>
+                <th data-sort="username" class="sortable">用户名 <span class="sort-icon">⇅</span></th>
+                <th data-sort="email" class="sortable">邮箱 <span class="sort-icon">⇅</span></th>
+                <th data-sort="email_send" class="sortable">邮件提醒 <span class="sort-icon">⇅</span></th>
+                <th data-sort="is_active" class="sortable">状态 <span class="sort-icon">⇅</span></th>
+                <th data-sort="is_admin" class="sortable">权限 <span class="sort-icon">⇅</span></th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+              <tr data-id="{{ user.id }}">
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ '是' if user.email_send else '否' }}</td>
+                <td>{{ '激活' if user.is_active else '停用' }}</td>
+                <td>{{ '管理员' if user.is_admin else '普通用户' }}</td>
+                <td>
+                  <div class="user-action-group">
+                    <button class="btn btn-primary btn-toggle-status">{{ '停用' if user.is_active else '激活' }}</button>
+                    <button class="btn btn-primary btn-toggle-admin">{{ '降级' if user.is_admin else '升级' }}</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-controls">
+          <div class="table-pagination" data-table="users">
+            <select class="page-size-select" data-table="users" aria-label="选择每页显示数量">
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="50">50</option>
+            </select>
+            <div class="pagination-controls">
+              <button class="btn-page" data-action="prev" data-table="users">&lt;</button>
+              <span class="current-page" data-table="users">1</span>
+              <button class="btn-page" data-action="next" data-table="users">&gt;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 设备管理 -->
+      <div class="tab-pane" id="devices">
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 5px">
+          <button class="btn-refresh-table" data-table="devices" title="刷新" style="font-size: 24px; background: none; border: none; cursor: pointer; margin-right: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center">⟳</button>
+        </div>
+        <!-- 添加加载状态显示 -->
+        <div class="table-loading" id="devices-loading" style="display: none">
+          <div class="spinner"></div>
+          <p>正在加载数据...</p>
+        </div>
+        <div class="table-container">
+          <table class="table" id="devices-table">
+            <thead>
+              <tr>
+                <th data-sort="id" class="sortable">ID <span class="sort-icon">⇅</span></th>
+                <th data-sort="name" class="sortable">设备名称 <span class="sort-icon">⇅</span></th>
+                <th data-sort="username" class="sortable">校园网账号 <span class="sort-icon">⇅</span></th>
+                <th data-sort="ipv4" class="sortable">IPv4 <span class="sort-icon">⇅</span></th>
+                <th data-sort="ipv6" class="sortable">IPv6 <span class="sort-icon">⇅</span></th>
+                <th data-sort="last_online_time" class="sortable">最后在线时间 <span class="sort-icon">⇅</span></th>
+                <th data-sort="is_online" class="sortable">状态 <span class="sort-icon">⇅</span></th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for device in devices %}
+              <tr data-id="{{ device.id }}">
+                <td>{{ device.id }}</td>
+                <td>
+                  {{ device.name }}
+                  <button class="btn-edit-name" data-device-id="{{ device.id }}" data-device-name="{{ device.name }}"><i class="edit-icon">✎</i></button>
+                </td>
+                <td>
+                  {{ device.username }}
+                  <button class="btn-select-account" data-device-id="{{ device.id }}"><i class="edit-icon">✎</i></button>
+                </td>
+                <td>{{ device.ipv4 }}</td>
+                <td>{{ device.ipv6 }}</td>
+                <td class="datetime" data-date="{{ device.last_online_time }}">{{ device.last_online_time }}</td>
+                <td>{{ '在线' if device.is_online else '离线' }}</td>
+                <td>
+                  <div class="device-action-group">
+                    <button class="btn btn-primary btn-check-device">检查</button>
+                    <button class="btn btn-success btn-login-device">登录</button>
+                    <button class="btn btn-warning btn-logout-device">退出</button>
+                    <button class="btn btn-danger btn-delete-device">删除</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-controls">
+          <div class="table-pagination" data-table="devices">
+            <select class="page-size-select" data-table="devices" aria-label="选择每页显示数量">
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="50">50</option>
+            </select>
+            <div class="pagination-controls">
+              <button class="btn-page" data-action="prev" data-table="devices">&lt;</button>
+              <span class="current-page" data-table="devices">1</span>
+              <button class="btn-page" data-action="next" data-table="devices">&gt;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- 校园网账号管理 -->
+      <div class="tab-pane {% if not current_user.is_admin %}active{% endif %}" id="network-accounts">
+        <div class="actions" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center">
+          <button class="btn btn-primary" id="btn-add-network-account">添加校园网账号</button>
+          <button class="btn-refresh-table" data-table="network-accounts" title="刷新" style="font-size: 24px; background: none; border: none; cursor: pointer; margin-left: 10px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center">⟳</button>
+        </div>
+        <!-- 添加加载状态显示 -->
+        <div class="table-loading" id="network-accounts-loading" style="display: none">
+          <div class="spinner"></div>
+          <p>正在加载数据...</p>
+        </div>
+        <div class="table-container">
+          <table class="table" id="network-accounts-table">
+            <thead>
+              <tr>
+                <th data-sort="id" class="sortable">ID <span class="sort-icon">⇅</span></th>
+                <th data-sort="username" class="sortable">校园网账号 <span class="sort-icon">⇅</span></th>
+                <th data-sort="description" class="sortable">描述 <span class="sort-icon">⇅</span></th>
+                <th data-sort="online_devices_count" class="sortable">在线设备数 <span class="sort-icon">⇅</span></th>
+                <th data-sort="created_at" class="sortable">创建时间 <span class="sort-icon">⇅</span></th>
+                <th data-sort="last_check_at" class="sortable">最后检查时间 <span class="sort-icon">⇅</span></th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for account in network_accounts %}
+              <tr data-id="{{ account.id }}">
+                <td>{{ account.id }}</td>
+                <td>{{ account.username }}</td>
+                <td>{{ account.description }}</td>
+                <td>{{ account.online_devices_count }}</td>
+                <td class="datetime" data-date="{{ account.created_at }}">{{ account.created_at }}</td>
+                <td class="datetime" data-date="{{ account.last_check_at }}">{{ account.last_check_at }}</td>
+                <td>
+                  <div class="account-action-group">
+                    <button class="btn btn-primary btn-edit-account" data-account-id="{{ account.id }}" data-user-id="{{ account.user_id }}">编辑</button>
+                    <button class="btn btn-danger btn-delete-account" data-account-id="{{ account.id }}" data-user-id="{{ account.user_id }}">删除</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-controls">
+          <div class="table-pagination" data-table="network-accounts">
+            <select class="page-size-select" data-table="network-accounts" aria-label="选择每页显示数量">
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="50">50</option>
+            </select>
+            <div class="pagination-controls">
+              <button class="btn-page" data-action="prev" data-table="network-accounts">&lt;</button>
+              <span class="current-page" data-table="network-accounts">1</span>
+              <button class="btn-page" data-action="next" data-table="network-accounts">&gt;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新增：通用确认弹窗 -->
+<div id="confirmModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 id="confirmModalTitle" style="margin: 0">确认操作</h3>
+      <span class="close-confirm-modal" style="margin-left: 20px">&times;</span>
+    </div>
+    <p id="confirmModalMessage">确定要执行此操作吗？</p>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px">
+      <button id="btnCancelConfirm" class="btn btn-secondary">取消</button>
+      <button id="btnConfirmAction" class="btn btn-danger">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 操作结果提示框 -->
+<div id="resultToast" class="toast">
+  <div id="toastContent" class="toast-content"></div>
+</div>
+
+<!-- 修改设备名称模态框 -->
+<div id="editNameModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">修改设备名称</h3>
+      <span class="close-edit-modal" style="font-size: 24px; cursor: pointer; margin-left: 20px">&times;</span>
+    </div>
+    <div class="form-group">
+      <label for="editDeviceName">新设备名称</label>
+      <input type="text" class="form-control" id="editDeviceName" placeholder="输入新设备名称" />
+    </div>
+    <input type="hidden" id="editDeviceId" value="" />
+    <button id="btnSaveDeviceName" class="btn btn-primary" style="width: 100%">保存</button>
+  </div>
+</div>
+
+<!-- 校园网账号模态框 -->
+<div id="networkAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">校园网账号管理</h3>
+      <span class="close-network-modal" style="font-size: 24px; cursor: pointer; margin-left: 20px">&times;</span>
+    </div>
+    <div id="networkAccountList"></div>
+    <div class="form-group">
+      <button id="btnAddUserAccount" class="btn btn-primary">添加校园网账号</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加/编辑校园网账号模态框 -->
+<div id="editAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 id="accountModalTitle" style="margin: 0">添加校园网账号</h3>
+      <span class="close-edit-account-modal" style="font-size: 24px; cursor: pointer; margin-left: 20px">&times;</span>
+    </div>
+    <div class="form-group">
+      <label for="accountUsername">账号</label>
+      <input type="text" class="form-control" id="accountUsername" placeholder="输入校园网账号" />
+    </div>
+    <div class="form-group">
+      <label for="accountPassword">密码</label>
+      <input type="password" class="form-control" id="accountPassword" placeholder="输入校园网密码" />
+    </div>
+    <div class="form-group">
+      <label for="accountDescription">描述</label>
+      <input type="text" class="form-control" id="accountDescription" placeholder="输入描述信息" />
+    </div>
+    <input type="hidden" id="accountId" value="" />
+    <input type="hidden" id="userId" value="" />
+    <input type="hidden" id="editMode" value="add" />
+    <button id="btnSaveAccount" class="btn btn-primary" style="width: 100%">保存</button>
+  </div>
+</div>
+
+<!-- 选择校园网账号模态框 -->
+<div id="selectAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">选择校园网账号</h3>
+      <span class="close-select-account-modal" style="font-size: 24px; cursor: pointer; margin-left: 20px">&times;</span>
+    </div>
+    <div id="selectAccountList" class="account-list"></div>
+    <input type="hidden" id="selectedDeviceId" value="" />
+    <button id="btnConfirmSelectAccount" class="btn btn-primary" style="width: 100%; margin-top: 20px">确认</button>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script src="{{ PRE_URL }}/static/js/api.js"></script>
+<script src="{{ PRE_URL }}/static/js/utils.js"></script>
+<script>
+  // 将服务器端传来的变量添加到JavaScript
+  var MAX_DEVICE_CONNECTIONS = Number('{{ max_device_connections }}');
+  // 添加当前用户ID和管理员状态
+  var CURRENT_USER_ID = parseInt('{{ current_user.id }}');
+  var IS_ADMIN = '{{ current_user.is_admin }}' === 'True';
+
+  // 格式化日期时间函数
+  function formatDateTime(dateTimeStr) {
+    return Utils.formatDateTime(dateTimeStr);
+  }
+
+  // 应用日期时间格式化
+  function applyDateTimeFormatting() {
+    document.querySelectorAll('.datetime').forEach((element) => {
+      const dateStr = element.getAttribute('data-date');
+      if (dateStr) {
+        element.textContent = formatDateTime(dateStr);
+      }
+    });
+  }
+
+  // Tab切换
+  var tabs = document.querySelectorAll('.tab');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  const editNameModal = document.getElementById('editNameModal');
+  const closeEditBtn = document.querySelector('.close-edit-modal');
+  const saveDeviceNameBtn = document.getElementById('btnSaveDeviceName');
+
+  // 校园网账号管理相关元素
+  const networkAccountModal = document.getElementById('networkAccountModal');
+  const closeNetworkModalBtn = document.querySelector('.close-network-modal');
+  const btnAddUserAccount = document.getElementById('btnAddUserAccount');
+
+  // 编辑账号模态框
+  const editAccountModal = document.getElementById('editAccountModal');
+  const closeEditAccountBtn = document.querySelector('.close-edit-account-modal');
+  const btnSaveAccount = document.getElementById('btnSaveAccount');
+
+  // 选择校园网账号模态框
+  const selectAccountModal = document.getElementById('selectAccountModal');
+  const closeSelectAccountBtn = document.querySelector('.close-select-account-modal');
+  const btnConfirmSelectAccount = document.getElementById('btnConfirmSelectAccount');
+
+  // 添加账号按钮
+  const btnAddNetworkAccount = document.getElementById('btn-add-network-account');
+
+  // 通用确认模态框
+  const confirmModal = document.getElementById('confirmModal');
+  const closeConfirmBtn = document.querySelector('.close-confirm-modal');
+  const btnCancelConfirm = document.getElementById('btnCancelConfirm');
+  const btnConfirmAction = document.getElementById('btnConfirmAction');
+  let confirmCallback = null;
+
+  // 清空模态框数据的函数
+  function resetEditNameModal() {
+    document.getElementById('editDeviceName').value = '';
+    document.getElementById('editDeviceId').value = '';
+  }
+
+  function resetEditAccountModal() {
+    document.getElementById('accountUsername').value = '';
+    document.getElementById('accountPassword').value = '';
+    document.getElementById('accountDescription').value = '';
+    document.getElementById('accountId').value = '';
+    document.getElementById('userId').value = '';
+    document.getElementById('editMode').value = 'add';
+  }
+
+  function resetSelectAccountModal() {
+    document.getElementById('selectedDeviceId').value = '';
+    const accountListDiv = document.getElementById('selectAccountList');
+    accountListDiv.innerHTML = '';
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', async function () {
+      // 移除所有tab的active类
+      tabs.forEach((t) => t.classList.remove('active'));
+      // 添加当前tab的active类
+      this.classList.add('active');
+
+      // 隐藏所有内容
+      tabPanes.forEach((pane) => pane.classList.remove('active'));
+      // 显示当前内容
+      const tabId = this.dataset.tab;
+      document.getElementById(tabId).classList.add('active');
+
+      // 保存当前tab到localStorage
+      localStorage.setItem('admin_selected_tab', tabId);
+
+      // 切换tab时立即加载数据
+      const table = document.getElementById(`${tabId}-table`);
+      const loading = document.getElementById(`${tabId}-loading`);
+
+      if (table && loading) {
+        // 显示加载状态
+        table.style.display = 'none';
+        loading.style.display = 'block';
+
+        try {
+          // 加载当前tab的数据
+          await refreshTableData(tabId);
+        } catch (error) {
+          showToast('加载数据失败: ' + error.message, false);
+
+          // 发生错误时也显示表格
+          loading.style.display = 'none';
+          table.style.display = 'table';
+        }
+      }
+    });
+  });
+
+  // Toast通知
+  const toastElement = document.getElementById('resultToast');
+  const toastContent = document.getElementById('toastContent');
+
+  function showToast(message, isSuccess = true) {
+    if (isSuccess) {
+      Utils.showSuccessToast(message);
+    } else {
+      Utils.showErrorToast(message);
+    }
+  }
+
+  // 获取当前激活的tab ID
+  function getCurrentTabId() {
+    const activeTab = document.querySelector('.tab.active');
+    return activeTab ? activeTab.dataset.tab : 'users';
+  }
+
+  // 用户管理操作
+  document.querySelectorAll('.btn-toggle-status').forEach((button) => {
+    button.addEventListener('click', function () {
+      const userId = this.closest('tr').dataset.id;
+      API.users
+        .toggleUserStatus(userId)
+        .then((data) => {
+          if (data.success) {
+            showToast('用户状态更新成功');
+
+            // 立即刷新用户表格
+            refreshTableData('users');
+          } else {
+            showToast('操作失败: ' + data.message, false);
+          }
+        })
+        .catch((error) => showToast('操作失败: ' + error, false));
+    });
+  });
+
+  document.querySelectorAll('.btn-toggle-admin').forEach((button) => {
+    button.addEventListener('click', function () {
+      const userId = this.closest('tr').dataset.id;
+      API.users
+        .toggleUserAdmin(userId)
+        .then((data) => {
+          if (data.success) {
+            showToast('用户权限更新成功');
+
+            // 立即刷新用户表格
+            refreshTableData('users');
+          } else {
+            showToast('操作失败: ' + data.message, false);
+          }
+        })
+        .catch((error) => showToast('操作失败: ' + error, false));
+    });
+  });
+
+  // 为用户账号管理按钮绑定事件
+  function setupUserAccountButtonListeners() {
+    // 编辑用户账号
+    document.querySelectorAll('.btn-edit-user-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+        document.getElementById('accountId').value = accountId;
+        document.getElementById('editMode').value = 'edit';
+        document.getElementById('accountModalTitle').textContent = '编辑校园网账号';
+
+        // 使用API对象获取账号详情
+        API.accounts
+          .getAccount(accountId)
+          .then((data) => {
+            if (data.success) {
+              document.getElementById('accountUsername').value = data.account.username;
+              document.getElementById('accountPassword').value = data.account.password;
+              document.getElementById('accountDescription').value = data.account.description || '';
+
+              networkAccountModal.style.display = 'none';
+              editAccountModal.style.display = 'block';
+            } else {
+              showToast('获取账号详情失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => {
+            showToast('获取账号详情失败: ' + error, false);
+          });
+      });
+    });
+
+    // 移除用户账号
+    document.querySelectorAll('.btn-remove-user-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+        const userId = document.getElementById('userId').value;
+
+        showConfirmModal('确认移除', '确定要移除该校园网账号？', function () {
+          API.admin
+            .deleteAccount(accountId)
+            .then((data) => {
+              if (data.success) {
+                showToast('移除校园网账号成功');
+                // 重新加载账号列表
+                document.querySelector('.btn-manage-accounts[data-user-id="' + userId + '"]').click();
+              } else {
+                showToast('移除校园网账号失败: ' + data.message, false);
+              }
+            })
+            .catch((error) => {
+              showToast('移除校园网账号失败: ' + error, false);
+            });
+        });
+      });
+    });
+  }
+
+  // 添加用户账号
+  btnAddUserAccount.addEventListener('click', function () {
+    document.getElementById('accountId').value = '';
+    document.getElementById('accountUsername').value = '';
+    document.getElementById('accountPassword').value = '';
+    document.getElementById('accountDescription').value = '';
+    document.getElementById('editMode').value = 'add';
+    document.getElementById('accountModalTitle').textContent = '添加校园网账号';
+
+    networkAccountModal.style.display = 'none';
+    editAccountModal.style.display = 'block';
+  });
+
+  // 保存校园网账号
+  btnSaveAccount.addEventListener('click', function () {
+    const username = document.getElementById('accountUsername').value.trim();
+    const password = document.getElementById('accountPassword').value.trim();
+    const description = document.getElementById('accountDescription').value.trim();
+    const accountId = document.getElementById('accountId').value;
+    const userId = document.getElementById('userId').value;
+    const editMode = document.getElementById('editMode').value;
+
+    if (!username || !password) {
+      Utils.showErrorToast('请填写账号和密码');
+      return;
+    }
+
+    const data = {
+      username: username,
+      password: password,
+      description: description,
+    };
+
+    if (userId && editMode === 'add') {
+      data.user_id = userId;
+    }
+
+    if (editMode === 'add') {
+      API.accounts
+        .addAccount(data)
+        .then((result) => {
+          if (result.success) {
+            showToast('添加校园网账号成功');
+            editAccountModal.style.display = 'none';
+            resetEditAccountModal();
+
+            if (userId) {
+              document.querySelector('.btn-manage-accounts[data-user-id="' + userId + '"]').click();
+            } else {
+              // 立即刷新表格
+              refreshTableData('network-accounts');
+            }
+          } else {
+            showToast('添加校园网账号失败: ' + result.message, false);
+          }
+        })
+        .catch((error) => showToast('添加校园网账号失败: ' + error, false));
+    } else {
+      API.accounts
+        .updateAccount(accountId, data)
+        .then((result) => {
+          if (result.success) {
+            showToast('更新校园网账号成功');
+            editAccountModal.style.display = 'none';
+            resetEditAccountModal();
+
+            if (userId) {
+              document.querySelector('.btn-manage-accounts[data-user-id="' + userId + '"]').click();
+            } else {
+              // 立即刷新表格
+              refreshTableData('network-accounts');
+            }
+          } else {
+            showToast('更新校园网账号失败: ' + result.message, false);
+          }
+        })
+        .catch((error) => showToast('更新校园网账号失败: ' + error, false));
+    }
+  });
+
+  // 获取可用的校园网账号相关函数
+  function updateAccountDisplay(data) {
+    const accountListDiv = document.getElementById('selectAccountList');
+    accountListDiv.innerHTML = '';
+
+    if (data.accounts.length === 0) {
+      accountListDiv.innerHTML = '<p>没有可用的校园网账号</p>';
+    } else {
+      data.accounts.forEach((account) => {
+        const accountDiv = document.createElement('div');
+        accountDiv.className = 'account-item';
+        accountDiv.innerHTML = `
+          <input type="radio" name="account" value="${account.id}" id="account-${account.id}"
+            ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'disabled' : ''}>
+          <label for="account-${account.id}" ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'class="disabled"' : ''}>
+            ${account.username} (${account.description || '无描述'})
+            - 在线设备: ${account.online_devices_count}/${MAX_DEVICE_CONNECTIONS}
+          </label>
+        `;
+        accountListDiv.appendChild(accountDiv);
+      });
+    }
+  }
+
+  // 选择校园网账号
+  document.addEventListener('click', function (e) {
+    const target = e.target;
+    let selectAccountBtn;
+
+    if (target.classList.contains('btn-select-account')) {
+      selectAccountBtn = target;
+    } else if (target.classList.contains('edit-icon') && target.parentElement.classList.contains('btn-select-account')) {
+      selectAccountBtn = target.parentElement;
+    }
+
+    if (selectAccountBtn) {
+      const deviceId = selectAccountBtn.dataset.deviceId;
+      document.getElementById('selectedDeviceId').value = deviceId;
+
+      API.admin
+        .getAccounts()
+        .then((data) => {
+          if (data.success) {
+            updateAccountDisplay(data);
+            selectAccountModal.style.display = 'block';
+          } else {
+            showToast('获取可用校园网账号失败: ' + data.message, false);
+          }
+        })
+        .catch((error) => showToast('获取可用校园网账号失败: ' + error, false));
+    }
+  });
+
+  // 确认选择校园网账号
+  btnConfirmSelectAccount.addEventListener('click', function () {
+    const deviceId = document.getElementById('selectedDeviceId').value;
+    const selectedAccount = document.querySelector('input[name="account"]:checked');
+
+    if (!selectedAccount) {
+      showToast('请选择一个校园网账号', false);
+      return;
+    }
+
+    const accountId = selectedAccount.value;
+
+    API.devices
+      .updateDevice(deviceId, { network_account_id: accountId })
+      .then((data) => {
+        if (data.success) {
+          showToast('设置校园网账号成功');
+          selectAccountModal.style.display = 'none';
+
+          // 立即刷新设备表格
+          refreshTableData('devices');
+        } else {
+          showToast('设置校园网账号失败: ' + data.message, false);
+        }
+      })
+      .catch((error) => showToast('设置校园网账号失败: ' + error, false));
+  });
+
+  // 设备管理操作
+  document.querySelectorAll('.btn-check-device').forEach((button) => {
+    button.addEventListener('click', function () {
+      const deviceId = this.closest('tr').dataset.id;
+      API.devices
+        .checkDevice(deviceId)
+        .then((data) => {
+          if (data.success) {
+            showToast('设备状态检查成功');
+
+            // 立即刷新设备表格
+            refreshTableData('devices');
+          } else {
+            showToast(data.message || '检查状态失败', false);
+
+            // 立即刷新设备表格
+            refreshTableData('devices');
+          }
+        })
+        .catch((error) => showToast('检查状态失败: ' + error, false));
+    });
+  });
+
+  // 登录设备
+  document.querySelectorAll('#devices-table .btn-login-device').forEach((button) => {
+    button.addEventListener('click', function () {
+      const deviceId = this.closest('tr').dataset.id;
+      API.devices
+        .loginDevice(deviceId)
+        .then((data) => {
+          if (data.success) {
+            Utils.showSuccessToast(data.message);
+            // 登录成功后自动检测设备状态
+            API.devices.checkDevice(deviceId).then(() => {
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            });
+          } else {
+            showToast(data.message || '登录失败', false);
+            // 立即刷新设备表格
+            refreshTableData('devices');
+          }
+        })
+        .catch((error) => showToast('登录失败: ' + error, false));
+    });
+  });
+
+  // 退出设备
+  document.querySelectorAll('#devices-table .btn-logout-device').forEach((button) => {
+    button.addEventListener('click', function () {
+      const deviceId = this.closest('tr').dataset.id;
+      API.devices
+        .logoutDevice(deviceId)
+        .then((data) => {
+          if (data.success) {
+            Utils.showSuccessToast(data.message);
+            // 退出成功后自动检测设备状态
+            API.devices.checkDevice(deviceId).then(() => {
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            });
+          } else {
+            showToast(data.message || '退出失败', false);
+            // 立即刷新设备表格
+            refreshTableData('devices');
+          }
+        })
+        .catch((error) => showToast('退出失败: ' + error, false));
+    });
+  });
+
+  // 删除设备
+  document.querySelectorAll('#devices-table .btn-delete-device').forEach((button) => {
+    button.addEventListener('click', function () {
+      const deviceId = this.closest('tr').dataset.id;
+      const deviceRow = this.closest('tr');
+
+      showConfirmModal('确认删除', '确定要删除这个设备吗？', function () {
+        API.devices
+          .deleteDevice(deviceId)
+          .then((data) => {
+            if (data.success) {
+              showToast('设备删除成功');
+              deviceRow.remove();
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            } else {
+              showToast('删除失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => {
+            showToast('删除失败: ' + error, false);
+          });
+      });
+    });
+  });
+
+  // 编辑设备名称
+  document.querySelectorAll('#devices-table .btn-edit-name').forEach((button) => {
+    button.addEventListener('click', function () {
+      const deviceId = this.dataset.deviceId;
+      const deviceName = this.dataset.deviceName;
+
+      document.getElementById('editDeviceId').value = deviceId;
+      document.getElementById('editDeviceName').value = deviceName;
+
+      editNameModal.style.display = 'block';
+    });
+  });
+
+  // 校园网账号管理相关操作
+  document.querySelectorAll('.btn-delete-device').forEach((button) => {
+    // 注意：这段代码在原始文件中重复了，第二次出现时应该被移除
+  });
+
+  // 校园网账号管理
+  if (btnAddNetworkAccount) {
+    btnAddNetworkAccount.addEventListener('click', function () {
+      document.getElementById('accountId').value = '';
+      document.getElementById('accountUsername').value = '';
+      document.getElementById('accountPassword').value = '';
+      document.getElementById('accountDescription').value = '';
+      document.getElementById('editMode').value = 'add';
+      document.getElementById('userId').value = '';
+      document.getElementById('accountModalTitle').textContent = '添加校园网账号';
+
+      // 显示添加账号模态框
+      editAccountModal.style.display = 'block';
+
+      // 添加表格刷新开始
+      const tableId = 'network-accounts';
+      const table = document.getElementById(`${tableId}-table`);
+      const loading = document.getElementById(`${tableId}-loading`);
+
+      // 显示加载状态
+      if (table && loading) {
+        table.style.display = 'none';
+        loading.style.display = 'block';
+      }
+      // 添加表格刷新结束
+    });
+  }
+
+  // 绑定校园网账号表格事件
+  function bindNetworkAccountsEvents() {
+    // 编辑账号
+    document.querySelectorAll('#network-accounts-table .btn-edit-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+        const accountUserId = parseInt(this.dataset.userId);
+        const currentUserId = CURRENT_USER_ID;
+        const isAdmin = IS_ADMIN;
+
+        if (accountUserId !== currentUserId && !isAdmin) {
+          showToast('没有权限操作此账号', false);
+          return;
+        }
+
+        document.getElementById('accountId').value = accountId;
+        document.getElementById('editMode').value = 'edit';
+        document.getElementById('userId').value = '';
+        document.getElementById('accountModalTitle').textContent = '编辑校园网账号';
+
+        API.accounts
+          .getAccount(accountId)
+          .then((data) => {
+            if (data.success) {
+              document.getElementById('accountUsername').value = data.account.username;
+              document.getElementById('accountPassword').value = data.account.password;
+              document.getElementById('accountDescription').value = data.account.description || '';
+
+              editAccountModal.style.display = 'block';
+
+              // 添加表格刷新开始
+              const tableId = 'network-accounts';
+              const table = document.getElementById(`${tableId}-table`);
+              const loading = document.getElementById(`${tableId}-loading`);
+
+              // 显示加载状态
+              if (table && loading) {
+                table.style.display = 'none';
+                loading.style.display = 'block';
+              }
+              // 添加表格刷新结束
+            } else {
+              showToast('获取账号详情失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => showToast('获取账号详情失败: ' + error, false));
+      });
+    });
+
+    // 删除账号 - 使用自定义确认弹窗
+    document.querySelectorAll('#network-accounts-table .btn-delete-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+        // 获取账号的所属用户ID（添加自定义属性到按钮中）
+        const accountUserId = parseInt(this.dataset.userId);
+        // 当前用户ID和管理员状态在页面加载时通过script标签传递
+        const currentUserId = CURRENT_USER_ID;
+        const isAdmin = IS_ADMIN;
+
+        // 检查权限 - 只有账号所有者或管理员可以删除
+        if (accountUserId !== currentUserId && !isAdmin) {
+          showToast('没有权限操作此账号', false);
+          return;
+        }
+
+        const accountRow = this.closest('tr');
+
+        showConfirmModal('确认删除', '确定要删除该校园网账号？这将影响所有使用此账号的设备。', function () {
+          API.accounts
+            .deleteAccount(accountId)
+            .then((data) => {
+              if (data.success) {
+                showToast('删除校园网账号成功');
+                accountRow.remove();
+
+                // 立即刷新校园网账号表格
+                refreshTableData('network-accounts');
+              } else {
+                showToast('删除校园网账号失败: ' + data.message, false);
+              }
+            })
+            .catch((error) => showToast('删除校园网账号失败: ' + error, false));
+        });
+      });
+    });
+  }
+
+  // 表格排序和分页功能
+  const tables = {
+    users: {
+      element: document.getElementById('users-table'),
+      data: Array.from(document.querySelectorAll('#users-table tbody tr')),
+      currentPage: 1,
+      pageSize: 5,
+      sortField: 'id',
+      sortDirection: 'asc',
+    },
+    devices: {
+      element: document.getElementById('devices-table'),
+      data: Array.from(document.querySelectorAll('#devices-table tbody tr')),
+      currentPage: 1,
+      pageSize: 5,
+      sortField: 'id',
+      sortDirection: 'asc',
+    },
+    'network-accounts': {
+      element: document.getElementById('network-accounts-table'),
+      data: Array.from(document.querySelectorAll('#network-accounts-table tbody tr')),
+      currentPage: 1,
+      pageSize: 5,
+      sortField: 'id',
+      sortDirection: 'asc',
+    },
+  };
+
+  // 初始化表格
+  Object.keys(tables).forEach((tableId) => {
+    if (tables[tableId].element) {
+      renderTable(tableId);
+
+      // 绑定排序事件
+      const headers = tables[tableId].element.querySelectorAll('th.sortable');
+      headers.forEach((header) => {
+        header.addEventListener('click', function () {
+          const field = this.dataset.sort;
+          // 新增：三态排序逻辑
+          if (tables[tableId].sortField === field) {
+            if (tables[tableId].sortDirection === 'asc') {
+              tables[tableId].sortDirection = 'desc';
+            } else if (tables[tableId].sortDirection === 'desc') {
+              // 第三次点击，取消排序，恢复原始顺序
+              tables[tableId].sortField = null;
+              tables[tableId].sortDirection = null;
+            } else {
+              tables[tableId].sortDirection = 'asc';
+            }
+          } else {
+            tables[tableId].sortField = field;
+            tables[tableId].sortDirection = 'asc';
+          }
+
+          sortTable(tableId);
+          renderTable(tableId);
+
+          // 更新排序图标
+          headers.forEach((h) => {
+            const icon = h.querySelector('.sort-icon');
+            if (icon) {
+              icon.textContent = '⇅';
+            }
+          });
+
+          const icon = this.querySelector('.sort-icon');
+          if (icon) {
+            if (tables[tableId].sortField === field && tables[tableId].sortDirection === 'asc') {
+              icon.textContent = '↑';
+            } else if (tables[tableId].sortField === field && tables[tableId].sortDirection === 'desc') {
+              icon.textContent = '↓';
+            } else {
+              icon.textContent = '⇅';
+            }
+          }
+        });
+      });
+    }
+  });
+
+  // 分页控制
+  document.querySelectorAll('.btn-page').forEach((button) => {
+    button.addEventListener('click', function () {
+      const tableId = this.dataset.table;
+      const action = this.dataset.action;
+      const totalPages = Math.ceil(tables[tableId].data.length / tables[tableId].pageSize);
+
+      if (action === 'prev' && tables[tableId].currentPage > 1) {
+        tables[tableId].currentPage--;
+      } else if (action === 'next' && tables[tableId].currentPage < totalPages) {
+        tables[tableId].currentPage++;
+      }
+
+      renderTable(tableId);
+    });
+  });
+
+  // 页码大小选择
+  document.querySelectorAll('.page-size-select').forEach((select) => {
+    select.addEventListener('change', function () {
+      const tableId = this.dataset.table;
+      const newPageSize = parseInt(this.value);
+      const oldPageSize = tables[tableId].pageSize;
+      const currentPage = tables[tableId].currentPage;
+
+      // 计算当前页的第一条记录在总数据中的索引
+      const firstItemIndex = (currentPage - 1) * oldPageSize;
+
+      // 更新页面大小
+      tables[tableId].pageSize = newPageSize;
+
+      // 计算新的页码，使得原来页面中的第一条记录尽可能出现在新的页面中
+      tables[tableId].currentPage = Math.floor(firstItemIndex / newPageSize) + 1;
+
+      // 渲染表格
+      renderTable(tableId);
+    });
+  });
+
+  // 渲染表格
+  function renderTable(tableId) {
+    if (!tables[tableId] || !tables[tableId].element) return;
+
+    const table = tables[tableId];
+    const tbody = table.element.querySelector('tbody');
+    const pageSize = table.pageSize;
+    const currentPage = table.currentPage;
+
+    // 清空表格
+    tbody.innerHTML = '';
+
+    // 计算起始和结束索引
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+
+    // 计算总页数
+    const totalPages = Math.ceil(table.data.length / pageSize);
+
+    // 处理页码超出范围的情况
+    if (currentPage > totalPages && totalPages > 0) {
+      table.currentPage = totalPages;
+      renderTable(tableId);
+      return;
+    }
+
+    // 显示当前页的数据
+    const visibleData = table.data.slice(startIndex, endIndex);
+    if (visibleData.length === 0 && table.data.length > 0) {
+      // 如果当前页没有数据但总数据不为空，回到第一页
+      table.currentPage = 1;
+      renderTable(tableId);
+      return;
+    }
+
+    visibleData.forEach((row) => {
+      tbody.appendChild(row.cloneNode(true));
+    });
+
+    // 更新页码显示
+    const pageCurrent = document.querySelector(`.current-page[data-table="${tableId}"]`);
+    if (pageCurrent) {
+      // 显示当前页码/总页数
+      pageCurrent.textContent = `${currentPage}/${totalPages || 1}`;
+    }
+
+    // 更新按钮状态
+    const prevBtn = document.querySelector(`.btn-page[data-action="prev"][data-table="${tableId}"]`);
+    const nextBtn = document.querySelector(`.btn-page[data-action="next"][data-table="${tableId}"]`);
+
+    if (prevBtn) {
+      prevBtn.disabled = currentPage <= 1;
+      // 视觉反馈
+      if (currentPage <= 1) {
+        prevBtn.style.opacity = '0.5';
+        prevBtn.style.cursor = 'not-allowed';
+      } else {
+        prevBtn.style.opacity = '1';
+        prevBtn.style.cursor = 'pointer';
+      }
+    }
+
+    if (nextBtn) {
+      nextBtn.disabled = currentPage >= totalPages;
+      // 视觉反馈
+      if (currentPage >= totalPages) {
+        nextBtn.style.opacity = '0.5';
+        nextBtn.style.cursor = 'not-allowed';
+      } else {
+        nextBtn.style.opacity = '1';
+        nextBtn.style.cursor = 'pointer';
+      }
+    }
+
+    // 重新绑定事件
+    if (tableId === 'users') {
+      bindUsersEvents();
+    } else if (tableId === 'devices') {
+      bindDevicesEvents();
+    } else if (tableId === 'network-accounts') {
+      bindNetworkAccountsEvents();
+    }
+
+    applyDateTimeFormatting();
+
+    // 更新表格信息显示
+    updateTableInfo(tableId, table.data.length, startIndex + 1, Math.min(endIndex, table.data.length));
+  }
+
+  // 绑定用户表格事件
+  function bindUsersEvents() {
+    // 状态切换
+    document.querySelectorAll('#users-table .btn-toggle-status').forEach((button) => {
+      button.addEventListener('click', function () {
+        const userId = this.closest('tr').dataset.id;
+        API.users
+          .toggleUserStatus(userId)
+          .then((data) => {
+            if (data.success) {
+              showToast('用户状态更新成功');
+
+              // 立即刷新用户表格
+              refreshTableData('users');
+            } else {
+              showToast('操作失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => showToast('操作失败: ' + error, false));
+      });
+    });
+
+    // 权限切换
+    document.querySelectorAll('#users-table .btn-toggle-admin').forEach((button) => {
+      button.addEventListener('click', function () {
+        const userId = this.closest('tr').dataset.id;
+        API.users
+          .toggleUserAdmin(userId)
+          .then((data) => {
+            if (data.success) {
+              showToast('用户权限更新成功');
+
+              // 立即刷新用户表格
+              refreshTableData('users');
+            } else {
+              showToast('操作失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => showToast('操作失败: ' + error, false));
+      });
+    });
+  }
+
+  // 绑定设备表格事件
+  function bindDevicesEvents() {
+    // 检查状态
+    document.querySelectorAll('#devices-table .btn-check-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        API.devices
+          .checkDevice(deviceId)
+          .then((data) => {
+            if (data.success) {
+              showToast('设备状态检查成功');
+
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            } else {
+              showToast(data.message || '检查状态失败', false);
+
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            }
+          })
+          .catch((error) => showToast('检查状态失败: ' + error, false));
+      });
+    });
+
+    // 登录设备
+    document.querySelectorAll('#devices-table .btn-login-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        API.devices
+          .loginDevice(deviceId)
+          .then((data) => {
+            if (data.success) {
+              Utils.showSuccessToast(data.message);
+              // 登录成功后自动检测设备状态
+              API.devices.checkDevice(deviceId).then(() => {
+                // 立即刷新设备表格
+                refreshTableData('devices');
+              });
+            } else {
+              showToast(data.message || '登录失败', false);
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            }
+          })
+          .catch((error) => showToast('登录失败: ' + error, false));
+      });
+    });
+
+    // 退出设备
+    document.querySelectorAll('#devices-table .btn-logout-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        API.devices
+          .logoutDevice(deviceId)
+          .then((data) => {
+            if (data.success) {
+              Utils.showSuccessToast(data.message);
+              // 退出成功后自动检测设备状态
+              API.devices.checkDevice(deviceId).then(() => {
+                // 立即刷新设备表格
+                refreshTableData('devices');
+              });
+            } else {
+              showToast(data.message || '退出失败', false);
+              // 立即刷新设备表格
+              refreshTableData('devices');
+            }
+          })
+          .catch((error) => showToast('退出失败: ' + error, false));
+      });
+    });
+
+    // 删除设备
+    document.querySelectorAll('#devices-table .btn-delete-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        const deviceRow = this.closest('tr');
+
+        showConfirmModal('确认删除', '确定要删除这个设备吗？', function () {
+          API.devices
+            .deleteDevice(deviceId)
+            .then((data) => {
+              if (data.success) {
+                showToast('设备删除成功');
+                deviceRow.remove();
+                // 立即刷新设备表格
+                refreshTableData('devices');
+              } else {
+                showToast('删除失败: ' + data.message, false);
+              }
+            })
+            .catch((error) => {
+              showToast('删除失败: ' + error, false);
+            });
+        });
+      });
+    });
+
+    // 编辑设备名称
+    document.querySelectorAll('#devices-table .btn-edit-name').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.dataset.deviceId;
+        const deviceName = this.dataset.deviceName;
+
+        document.getElementById('editDeviceId').value = deviceId;
+        document.getElementById('editDeviceName').value = deviceName;
+
+        editNameModal.style.display = 'block';
+      });
+    });
+  }
+
+  // 排序表格
+  function sortTable(tableId) {
+    const table = tables[tableId];
+    const field = table.sortField;
+    const direction = table.sortDirection;
+
+    // 新增：不排序时恢复原始顺序
+    if (!field || !direction) {
+      // 恢复原始顺序
+      table.data = Array.from(table.element.querySelectorAll('tbody tr'));
+      return;
+    }
+
+    table.data.sort((a, b) => {
+      let valueA, valueB;
+      if (field === 'id') {
+        valueA = parseInt(a.querySelector('td:nth-child(1)').textContent);
+        valueB = parseInt(b.querySelector('td:nth-child(1)').textContent);
+      } else {
+        // 获取对应字段的单元格
+        const headers = Array.from(table.element.querySelectorAll('th'));
+        const fieldIndex = headers.findIndex((header) => header.dataset.sort === field);
+        if (fieldIndex !== -1) {
+          valueA = a.querySelector(`td:nth-child(${fieldIndex + 1})`).textContent.trim();
+          valueB = b.querySelector(`td:nth-child(${fieldIndex + 1})`).textContent.trim();
+          // 尝试将值转换为数字
+          if (!isNaN(valueA) && !isNaN(valueB)) {
+            valueA = parseFloat(valueA);
+            valueB = parseFloat(valueB);
+          }
+        } else {
+          return 0;
+        }
+      }
+      // 比较
+      if (valueA < valueB) {
+        return direction === 'asc' ? -1 : 1;
+      } else if (valueA > valueB) {
+        return direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }
+
+  // 初始化表格排序和分页
+  Object.keys(tables).forEach((tableId) => {
+    if (tables[tableId].element) {
+      sortTable(tableId);
+      renderTable(tableId);
+    }
+  });
+
+  // 页面加载时设置分页
+  document.addEventListener('DOMContentLoaded', async function () {
+    // 恢复tab选择
+    const savedTab = localStorage.getItem('admin_selected_tab');
+    if (savedTab) {
+      // 取消所有tab和tab-pane的active
+      tabs.forEach((t) => t.classList.remove('active'));
+      tabPanes.forEach((pane) => pane.classList.remove('active'));
+      // 激活保存的tab
+      const tabBtn = document.querySelector(`.tab[data-tab='${savedTab}']`);
+      const tabPane = document.getElementById(savedTab);
+      if (tabBtn && tabPane) {
+        tabBtn.classList.add('active');
+        tabPane.classList.add('active');
+      }
+    }
+
+    // 绑定模态框关闭按钮事件
+    closeEditBtn.addEventListener('click', function () {
+      editNameModal.style.display = 'none';
+      resetEditNameModal();
+    });
+
+    // 保存设备名称
+    saveDeviceNameBtn.addEventListener('click', function () {
+      const deviceId = document.getElementById('editDeviceId').value;
+      const deviceName = document.getElementById('editDeviceName').value.trim();
+
+      if (!deviceName) {
+        showToast('设备名称不能为空', false);
+        return;
+      }
+
+      API.devices
+        .updateDevice(deviceId, { name: deviceName })
+        .then((data) => {
+          if (data.success) {
+            showToast('设备名称修改成功');
+            editNameModal.style.display = 'none';
+            resetEditNameModal();
+
+            // 立即刷新设备表格
+            refreshTableData('devices');
+          } else {
+            showToast('修改失败: ' + data.message, false);
+          }
+        })
+        .catch((error) => {
+          showToast('修改失败: ' + error, false);
+        });
+    });
+
+    closeNetworkModalBtn.addEventListener('click', function () {
+      networkAccountModal.style.display = 'none';
+    });
+
+    closeEditAccountBtn.addEventListener('click', function () {
+      editAccountModal.style.display = 'none';
+      resetEditAccountModal();
+    });
+
+    closeSelectAccountBtn.addEventListener('click', function () {
+      selectAccountModal.style.display = 'none';
+      resetSelectAccountModal();
+    });
+
+    // 绑定通用确认模态框事件
+    closeConfirmBtn.addEventListener('click', function () {
+      confirmModal.style.display = 'none';
+      confirmCallback = null;
+    });
+
+    btnCancelConfirm.addEventListener('click', function () {
+      confirmModal.style.display = 'none';
+      confirmCallback = null;
+    });
+
+    btnConfirmAction.addEventListener('click', function () {
+      if (typeof confirmCallback === 'function') {
+        confirmCallback();
+      }
+      confirmModal.style.display = 'none';
+      confirmCallback = null;
+    });
+
+    // 点击模态框外部关闭
+    window.onclick = function (event) {
+      if (event.target == editNameModal) {
+        editNameModal.style.display = 'none';
+        resetEditNameModal();
+      } else if (event.target == networkAccountModal) {
+        networkAccountModal.style.display = 'none';
+      } else if (event.target == editAccountModal) {
+        editAccountModal.style.display = 'none';
+        resetEditAccountModal();
+      } else if (event.target == selectAccountModal) {
+        selectAccountModal.style.display = 'none';
+        resetSelectAccountModal();
+      } else if (event.target == confirmModal) {
+        confirmModal.style.display = 'none';
+        confirmCallback = null;
+      }
+    };
+
+    // 应用日期时间格式化
+    applyDateTimeFormatting();
+
+    // 初始加载所有数据
+    await loadAllData();
+  });
+
+  // 处理ESC键关闭模态框
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+      if (editNameModal.style.display === 'block') {
+        editNameModal.style.display = 'none';
+        resetEditNameModal();
+      }
+      if (networkAccountModal.style.display === 'block') {
+        networkAccountModal.style.display = 'none';
+      }
+      if (editAccountModal.style.display === 'block') {
+        editAccountModal.style.display = 'none';
+        resetEditAccountModal();
+      }
+      if (selectAccountModal.style.display === 'block') {
+        selectAccountModal.style.display = 'none';
+        resetSelectAccountModal();
+      }
+      if (confirmModal.style.display === 'block') {
+        confirmModal.style.display = 'none';
+        confirmCallback = null;
+      }
+    }
+  });
+
+  // 加载所有数据的函数
+  async function loadAllData() {
+    try {
+      // 根据当前激活的tab加载数据
+      const activeTab = document.querySelector('.tab.active');
+      if (activeTab) {
+        const tabId = activeTab.dataset.tab;
+        const tableId = `${tabId}-table`;
+        const table = document.getElementById(tableId);
+        const loading = document.getElementById(`${tabId}-loading`);
+
+        if (table && loading) {
+          // 显示加载状态
+          table.style.display = 'none';
+          loading.style.display = 'block';
+
+          await refreshTableData(tabId);
+        }
+      }
+    } catch (error) {
+      showToast('初始数据加载失败: ' + error.message, false);
+    }
+  }
+
+  // 刷新表格数据函数
+  async function refreshTableData(tableId) {
+    const table = document.getElementById(`${tableId}-table`);
+    const loading = document.getElementById(`${tableId}-loading`);
+
+    try {
+      if (tableId === 'users') {
+        const response = await API.admin.getAdminUsers();
+        if (response.success) {
+          updateUsersTable(response.users);
+        } else {
+          throw new Error(response.message || '获取用户列表失败');
+        }
+      } else if (tableId === 'devices') {
+        const response = await API.admin.getAdminDevices();
+        if (response.success) {
+          updateDevicesTable(response.devices);
+        } else {
+          throw new Error(response.message || '获取设备列表失败');
+        }
+      } else if (tableId === 'network-accounts') {
+        const response = await API.accounts.getAccounts();
+        if (response.success) {
+          updateNetworkAccountsTable(response.accounts);
+        } else {
+          throw new Error(response.message || '获取校园网账号列表失败');
+        }
+      }
+
+      // 显示表格
+      loading.style.display = 'none';
+      table.style.display = 'table';
+
+      // 更新表格排序和分页
+      tables[tableId].data = Array.from(document.querySelectorAll(`#${tableId}-table tbody tr`));
+
+      // 保存当前排序和分页设置
+      const currentSort = tables[tableId].sortField;
+      const currentDirection = tables[tableId].sortDirection;
+      const currentPage = tables[tableId].currentPage;
+
+      // 应用排序
+      sortTable(tableId);
+
+      // 如果当前页大于总页数，则重置为第一页
+      const totalPages = Math.ceil(tables[tableId].data.length / tables[tableId].pageSize);
+      if (currentPage > totalPages && totalPages > 0) {
+        tables[tableId].currentPage = 1;
+      }
+
+      // 渲染表格
+      renderTable(tableId);
+
+      // 设置下拉选择框的值为当前pageSize
+      const pageSizeSelect = document.querySelector(`.page-size-select[data-table="${tableId}"]`);
+      if (pageSizeSelect) {
+        pageSizeSelect.value = tables[tableId].pageSize;
+      }
+    } catch (error) {
+      loading.style.display = 'none';
+      table.style.display = 'table';
+      showToast(`加载${tableId}数据失败: ${error.message}`, false);
+    }
+  }
+
+  // 创建表格行的辅助函数
+  function createTableRow(data, attributes = {}) {
+    const row = document.createElement('tr');
+
+    // 设置行属性
+    for (const [key, value] of Object.entries(attributes)) {
+      row.setAttribute(key, value);
+    }
+
+    return row;
+  }
+
+  // 创建表格单元格的辅助函数
+  function createTableCell(content, className = '') {
+    const cell = document.createElement('td');
+    if (className) {
+      cell.className = className;
+    }
+
+    if (typeof content === 'string' || typeof content === 'number') {
+      cell.textContent = content;
+    } else {
+      cell.appendChild(content);
+    }
+
+    return cell;
+  }
+
+  // 创建按钮的辅助函数
+  function createButton(text, className, attributes = {}) {
+    const button = document.createElement('button');
+    button.textContent = text;
+    button.className = className;
+
+    for (const [key, value] of Object.entries(attributes)) {
+      button.setAttribute(key, value);
+    }
+
+    return button;
+  }
+
+  // 更新用户表格
+  function updateUsersTable(users) {
+    const tbody = document.querySelector('#users-table tbody');
+    tbody.innerHTML = '';
+
+    users.forEach((user) => {
+      const row = createTableRow({}, { 'data-id': user.id });
+
+      // ID单元格
+      row.appendChild(createTableCell(user.id));
+
+      // 用户名单元格
+      row.appendChild(createTableCell(user.username));
+
+      // 邮箱单元格
+      row.appendChild(createTableCell(user.email));
+
+      // 邮件提醒单元格
+      row.appendChild(createTableCell(user.email_send ? '是' : '否'));
+
+      // 状态单元格
+      row.appendChild(createTableCell(user.is_active ? '激活' : '停用'));
+
+      // 权限单元格
+      row.appendChild(createTableCell(user.is_admin ? '管理员' : '普通用户'));
+
+      // 操作单元格
+      const actionsCell = document.createElement('td');
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = 'user-action-group';
+
+      // 状态按钮
+      const statusBtn = createButton(user.is_active ? '停用' : '激活', 'btn btn-success btn-toggle-status');
+      actionsContainer.appendChild(statusBtn);
+
+      // 权限按钮
+      const adminBtn = createButton(user.is_admin ? '降级' : '升级', 'btn btn-primary btn-toggle-admin');
+      actionsContainer.appendChild(adminBtn);
+
+      actionsCell.appendChild(actionsContainer);
+      row.appendChild(actionsCell);
+      tbody.appendChild(row);
+    });
+
+    bindUsersEvents();
+  }
+
+  // 更新设备表格
+  function updateDevicesTable(devices) {
+    const tbody = document.querySelector('#devices-table tbody');
+    tbody.innerHTML = '';
+
+    devices.forEach((device) => {
+      const row = createTableRow({}, { 'data-id': device.id });
+
+      // ID单元格
+      row.appendChild(createTableCell(device.id));
+
+      // 设备名称单元格
+      const nameCell = document.createElement('td');
+      nameCell.textContent = device.name;
+
+      const editNameBtn = createButton('', 'btn-edit-name', {
+        'data-device-id': device.id,
+        'data-device-name': device.name,
+      });
+
+      const editIcon = document.createElement('i');
+      editIcon.className = 'edit-icon';
+      editIcon.textContent = '✎';
+      editNameBtn.appendChild(editIcon);
+
+      nameCell.appendChild(editNameBtn);
+      row.appendChild(nameCell);
+
+      // 校园网账号单元格
+      const accountCell = document.createElement('td');
+      accountCell.textContent = device.username || '未设置';
+
+      const selectAccountBtn = createButton('', 'btn-select-account', {
+        'data-device-id': device.id,
+      });
+
+      const selectIcon = document.createElement('i');
+      selectIcon.className = 'edit-icon';
+      selectIcon.textContent = '✎';
+      selectAccountBtn.appendChild(selectIcon);
+
+      accountCell.appendChild(selectAccountBtn);
+      row.appendChild(accountCell);
+
+      // IPv4单元格
+      row.appendChild(createTableCell(device.ipv4 || ''));
+
+      // IPv6单元格
+      row.appendChild(createTableCell(device.ipv6 || ''));
+
+      // 最后在线时间单元格
+      const timeCell = createTableCell(formatDateTime(device.last_online_time), 'datetime');
+      timeCell.setAttribute('data-date', device.last_online_time);
+      row.appendChild(timeCell);
+
+      // 状态单元格
+      row.appendChild(createTableCell(device.is_online ? '在线' : '离线'));
+
+      // 操作单元格
+      const actionsCell = document.createElement('td');
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = 'device-action-group';
+
+      actionsContainer.appendChild(createButton('检查', 'btn btn-primary btn-check-device'));
+      actionsContainer.appendChild(createButton('登录', 'btn btn-success btn-login-device'));
+      actionsContainer.appendChild(createButton('退出', 'btn btn-warning btn-logout-device'));
+      actionsContainer.appendChild(createButton('删除', 'btn btn-danger btn-delete-device'));
+
+      actionsCell.appendChild(actionsContainer);
+      row.appendChild(actionsCell);
+
+      tbody.appendChild(row);
+    });
+
+    bindDevicesEvents();
+  }
+
+  // 更新校园网账号表格
+  function updateNetworkAccountsTable(accounts) {
+    const tbody = document.querySelector('#network-accounts-table tbody');
+    tbody.innerHTML = '';
+
+    accounts.forEach((account) => {
+      const row = createTableRow({}, { 'data-id': account.id });
+
+      // ID单元格
+      row.appendChild(createTableCell(account.id));
+
+      // 校园网账号单元格
+      row.appendChild(createTableCell(account.username));
+
+      // 描述单元格
+      row.appendChild(createTableCell(account.description || ''));
+
+      // 在线设备数单元格
+      row.appendChild(createTableCell(account.online_devices_count));
+
+      // 创建时间单元格
+      const createdCell = createTableCell(formatDateTime(account.created_at), 'datetime');
+      createdCell.setAttribute('data-date', account.created_at);
+      row.appendChild(createdCell);
+
+      // 最后检查时间单元格
+      const checkedCell = createTableCell(formatDateTime(account.last_check_at), 'datetime');
+      checkedCell.setAttribute('data-date', account.last_check_at);
+      row.appendChild(checkedCell);
+
+      // 操作单元格
+      const actionsCell = document.createElement('td');
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = 'account-action-group';
+
+      // 编辑按钮
+      const editBtn = createButton('编辑', 'btn btn-primary btn-edit-account', {
+        'data-account-id': account.id,
+        'data-user-id': account.user_id,
+      });
+      actionsContainer.appendChild(editBtn);
+
+      // 删除按钮
+      const deleteBtn = createButton('删除', 'btn btn-danger btn-delete-account', {
+        'data-account-id': account.id,
+        'data-user-id': account.user_id,
+      });
+      actionsContainer.appendChild(deleteBtn);
+
+      actionsCell.appendChild(actionsContainer);
+      row.appendChild(actionsCell);
+      tbody.appendChild(row);
+    });
+
+    bindNetworkAccountsEvents();
+  }
+
+  // 刷新表格数据
+  document.querySelectorAll('.btn-refresh-table').forEach((button) => {
+    button.addEventListener('click', async function () {
+      const tableId = this.dataset.table;
+      const table = document.getElementById(`${tableId}-table`);
+      const loading = document.getElementById(`${tableId}-loading`);
+
+      // 显示加载状态
+      table.style.display = 'none';
+      loading.style.display = 'block';
+
+      await refreshTableData(tableId);
+    });
+  });
+
+  // 添加表格信息显示
+  function updateTableInfo(tableId, total, start, end) {
+    // 检查是否已存在表格信息元素
+    let tableInfo = document.querySelector(`.table-info[data-table="${tableId}"]`);
+
+    // 如果不存在，创建一个
+    if (!tableInfo) {
+      tableInfo = document.createElement('div');
+      tableInfo.className = 'table-info';
+      tableInfo.setAttribute('data-table', tableId);
+
+      // 将信息元素添加到表格控制区域
+      const controlsDiv = document.querySelector(`.table-controls div[data-table="${tableId}"]`) || document.querySelector(`.table-pagination[data-table="${tableId}"]`);
+
+      if (controlsDiv) {
+        controlsDiv.appendChild(tableInfo);
+      }
+    }
+
+    // 更新信息内容
+    if (total === 0) {
+      tableInfo.textContent = '没有数据';
+    } else {
+      tableInfo.textContent = `显示 ${start}-${end}，共 ${total} 条`;
+    }
+  }
+
+  // 辅助函数：显示确认弹窗
+  function showConfirmModal(title, message, callback) {
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalMessage').textContent = message;
+    confirmModal.style.display = 'block';
+    confirmCallback = callback;
+  }
+
+  // 为校园网账号管理按钮绑定事件
+  function setupNetworkAccountButtonListeners() {
+    // 编辑账号
+    document.querySelectorAll('.btn-edit-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+        document.getElementById('accountId').value = accountId;
+        document.getElementById('editMode').value = 'edit';
+        document.getElementById('accountModalTitle').textContent = '编辑校园网账号';
+
+        // 使用API对象获取账号详情
+        API.accounts
+          .getAccount(accountId)
+          .then((data) => {
+            if (data.success) {
+              document.getElementById('accountUsername').value = data.account.username;
+              document.getElementById('accountPassword').value = data.account.password;
+              document.getElementById('accountDescription').value = data.account.description || '';
+
+              editAccountModal.style.display = 'block';
+            } else {
+              showToast('获取账号详情失败: ' + data.message, false);
+            }
+          })
+          .catch((error) => {
+            showToast('获取账号详情失败: ' + error, false);
+          });
+      });
+    });
+
+    // 删除账号
+    document.querySelectorAll('.btn-delete-account').forEach((button) => {
+      button.addEventListener('click', function () {
+        const accountId = this.dataset.accountId;
+
+        showConfirmModal('确认删除', '确定要删除该校园网账号？', function () {
+          API.accounts
+            .deleteAccount(accountId)
+            .then((data) => {
+              if (data.success) {
+                showToast('删除校园网账号成功');
+                // 重新加载账号列表
+                refreshTableData('network-accounts');
+              } else {
+                showToast('删除校园网账号失败: ' + data.message, false);
+              }
+            })
+            .catch((error) => {
+              showToast('删除校园网账号失败: ' + error, false);
+            });
+        });
+      });
+    });
+  }
+
+  // 为设备按钮绑定事件
+  function setupDeviceButtonListeners() {
+    // 检查设备
+    document.querySelectorAll('.btn-check-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        Utils.setButtonLoading(this, true);
+
+        API.devices
+          .checkDevice(deviceId)
+          .then(() => {
+            Utils.setButtonLoading(this, false);
+            // 刷新设备表格
+            refreshTableData('devices');
+          })
+          .catch((error) => {
+            Utils.setButtonLoading(this, false);
+            showToast('检查设备状态失败: ' + error, false);
+          });
+      });
+    });
+
+    // 登录设备
+    document.querySelectorAll('.btn-login-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        Utils.setButtonLoading(this, true);
+
+        API.devices
+          .loginDevice(deviceId)
+          .then((data) => {
+            Utils.setButtonLoading(this, false);
+            // 刷新设备表格
+            refreshTableData('devices');
+          })
+          .catch((error) => {
+            Utils.setButtonLoading(this, false);
+            showToast('登录设备失败: ' + error, false);
+          });
+      });
+    });
+
+    // 登出设备
+    document.querySelectorAll('.btn-logout-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+        Utils.setButtonLoading(this, true);
+
+        API.devices
+          .logoutDevice(deviceId)
+          .then((data) => {
+            Utils.setButtonLoading(this, false);
+            // 刷新设备表格
+            refreshTableData('devices');
+          })
+          .catch((error) => {
+            Utils.setButtonLoading(this, false);
+            showToast('登出设备失败: ' + error, false);
+          });
+      });
+    });
+
+    // 删除设备
+    document.querySelectorAll('.btn-delete-device').forEach((button) => {
+      button.addEventListener('click', function () {
+        const deviceId = this.closest('tr').dataset.id;
+
+        showConfirmModal('确认删除', '确定要删除该设备吗？', function () {
+          API.devices
+            .deleteDevice(deviceId)
+            .then((data) => {
+              if (data.success) {
+                showToast('删除设备成功');
+                // 刷新设备表格
+                refreshTableData('devices');
+              } else {
+                showToast('删除设备失败: ' + data.message, false);
+              }
+            })
+            .catch((error) => {
+              showToast('删除设备失败: ' + error, false);
+            });
+        });
+      });
+    });
+  }
+
+  // 加载设备的校园网账号
+  function loadDeviceAccounts(deviceId, callback) {
+    // 获取所有可用账号
+    API.accounts
+      .getAccounts()
+      .then((data) => {
+        if (data.success) {
+          callback(deviceId, data);
+        } else {
+          Utils.showErrorToast(data.message || '获取账号失败');
+        }
+      })
+      .catch((error) => {
+        Utils.showErrorToast('获取账号失败: ' + error);
+      });
+  }
+</script>
+
+{% endblock %}

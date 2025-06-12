@@ -1,0 +1,476 @@
+/* 暗色模式主题 */
+@import url('colors.css');
+
+/* 暗色模式变量 - 使用body.dark-mode选择器 */
+body.dark-mode {
+  /* 主题变量覆盖 */
+  --bg-color: var(--bg-color-dark);
+  --card-bg: var(--card-bg-dark);
+  --input-bg: var(--input-bg-dark);
+  --header-bg: var(--header-bg-dark);
+  --text-color: var(--text-color-dark);
+  --text-color-secondary: var(--text-color-secondary-dark);
+  --text-color-tertiary: var(--text-color-tertiary-dark);
+  --border-color: var(--border-color-dark);
+  --hover-color: var(--hover-color-dark);
+  --active-color: var(--active-color-dark);
+  --shadow-color: var(--shadow-color-dark);
+  --table-header-bg: var(--table-header-bg-dark);
+  --table-border: var(--table-border-dark);
+  --table-hover-bg: var(--table-hover-bg-dark);
+
+  /* 状态标签颜色 */
+  --status-online-bg: var(--status-online-bg-dark);
+  --status-online-color: var(--status-online-color-dark);
+  --status-offline-bg: var(--status-offline-bg-dark);
+  --status-offline-color: var(--status-offline-color-dark);
+
+  /* 警告信息背景 */
+  --alert-success-bg: var(--alert-success-bg-dark);
+  --alert-success-color: var(--alert-success-color-dark);
+  --alert-danger-bg: var(--alert-danger-bg-dark);
+  --alert-danger-color: var(--alert-danger-color-dark);
+  --alert-warning-bg: var(--alert-warning-bg-dark);
+  --alert-warning-color: var(--alert-warning-color-dark);
+  --alert-info-bg: var(--alert-info-bg-dark);
+  --alert-info-color: var(--alert-info-color-dark);
+}
+
+/* 暗色模式UI增强 */
+body.dark-mode {
+  /* 导航栏增强 */
+  nav,
+  .navbar {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* 卡片增强 */
+  .card {
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 10px var(--shadow-color);
+  }
+
+  .card-title {
+    color: var(--primary-color-light);
+    border-bottom-color: var(--border-color);
+  }
+
+  /* 表单元素增强 */
+  .form-control {
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+  }
+
+  .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem var(--primary-color-shadow);
+  }
+
+  /* 表格增强 */
+  .table {
+    color: var(--text-color);
+    background-color: var(--card-bg);
+  }
+
+  .table th,
+  .table td {
+    border-color: var(--border-color);
+  }
+
+  .table th {
+    background-color: var(--table-header-bg);
+  }
+
+  .table tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* 按钮增强 */
+  .btn-primary,
+  .btn-success,
+  .btn-danger,
+  .btn-warning,
+  .btn-check,
+  .btn-register,
+  .btn-logout,
+  .btn-delete {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-outline-primary {
+    border-color: var(--primary-color-light);
+    color: var(--primary-color-light);
+  }
+
+  .btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: var(--btn-text-color);
+  }
+
+  /* 状态指示器增强 */
+  .status-indicator,
+  .status-tag {
+    font-weight: 600;
+  }
+
+  /* 滚动条样式 */
+  body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  body::-webkit-scrollbar-track {
+    background: var(--bg-color);
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background: var(--text-color-tertiary-dark);
+    border-radius: 4px;
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-color-secondary-dark);
+  }
+
+  /* 主题切换器样式 */
+  .theme-switcher .theme-option {
+    color: var(--nav-text-color);
+  }
+
+  .theme-switcher .theme-option.active {
+    background-color: var(--primary-color-dark);
+    color: var(--btn-text-color);
+    font-weight: 600;
+  }
+
+  /* 模态框增强 */
+  .modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+  }
+
+  /* 分页控件增强 */
+  .btn-page,
+  .page-size-select,
+  .current-page {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+  }
+
+  .btn-page:hover:not(:disabled) {
+    background-color: var(--hover-color);
+  }
+
+  /* 设备卡片增强 */
+  .device-card {
+    border-color: var(--border-color);
+    background-color: var(--card-bg);
+  }
+
+  .device-card:hover {
+    border-color: var(--primary-color-light);
+    box-shadow: 0 5px 15px var(--shadow-color);
+  }
+
+  .device-header {
+    border-bottom-color: var(--border-color);
+  }
+
+  .device-info-item {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .device-info-label {
+    color: var(--text-color-secondary);
+  }
+
+  .device-actions {
+    border-top-color: var(--border-color);
+  }
+
+  .device-card-loading {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  /* 警告框增强 */
+  .alert-warning {
+    background-color: var(--alert-warning-bg);
+    color: var(--alert-warning-color);
+    border-color: var(--warning-color-dark);
+  }
+
+  .alert-info {
+    background-color: var(--alert-info-bg);
+    color: var(--alert-info-color);
+    border-color: var(--info-color-dark);
+  }
+
+  /* 覆盖导航按钮颜色 */
+  .nav-link {
+    color: var(--nav-text-color) !important;
+  }
+
+  .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* 页脚颜色 */
+  footer {
+    background-color: var(--bg-color-dark);
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+/* 下面是暗色模式下的特殊样式调整 */
+
+/* 导航栏强化 */
+body.dark-mode .navbar,
+body.dark-mode nav {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-mode .navbar-brand,
+body.dark-mode .nav-link {
+  color: var(--text-color) !important;
+}
+
+body.dark-mode .navbar-toggler {
+  border-color: var(--border-color);
+}
+
+/* 表格强化 */
+body.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .table thead th {
+  border-bottom: 2px solid var(--border-color);
+  font-weight: bold;
+}
+
+/* 表单元素强化 */
+body.dark-mode .form-control:focus {
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem var(--primary-color-shadow);
+}
+
+/* 按钮样式强化 */
+body.dark-mode .btn-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: #000;
+}
+
+body.dark-mode .btn-secondary:hover {
+  background-color: var(--secondary-color-dark);
+  border-color: var(--secondary-color-dark);
+  color: #000;
+}
+
+/* 徽章强化 */
+body.dark-mode .badge-primary {
+  background-color: var(--primary-color);
+  color: #000;
+}
+
+body.dark-mode .badge-secondary {
+  background-color: var(--secondary-color);
+  color: #000;
+}
+
+/* Tab样式强化 */
+body.dark-mode .tabs {
+  color: var(--text-color);
+}
+
+body.dark-mode .tab-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-mode .tab:hover {
+  background-color: var(--hover-color);
+}
+
+body.dark-mode .tab.active {
+  border-bottom: 2px solid var(--primary-color);
+  background-color: var(--active-color);
+  font-weight: bold;
+}
+
+/* 编辑按钮样式强化 */
+body.dark-mode .btn-edit-name,
+body.dark-mode .btn-select-account {
+  color: var(--primary-color);
+}
+
+/* 确认模态框样式强化 */
+body.dark-mode #confirmModal .modal-content {
+  background: var(--card-bg);
+}
+
+body.dark-mode #confirmModal .btn-secondary {
+  background: var(--text-color-tertiary-dark);
+  color: var(--text-color);
+}
+
+/* 校园网账号选择列表强化 */
+body.dark-mode .account-list {
+  background-color: var(--card-bg);
+}
+
+body.dark-mode .account-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-mode .account-item label.disabled {
+  color: var(--text-color-tertiary-dark);
+}
+
+/* 分页控件样式强化 */
+body.dark-mode .page-size-select {
+  border: 1px solid var(--border-color);
+  background-color: var(--table-header-bg);
+  color: var(--text-color);
+}
+
+body.dark-mode .btn-page {
+  border: 1px solid var(--border-color);
+  background-color: var(--table-header-bg);
+  color: var(--text-color);
+}
+
+body.dark-mode .current-page {
+  border: 1px solid var(--border-color);
+  background-color: var(--active-color);
+  color: var(--text-color);
+}
+
+/* 设备卡片样式强化 */
+body.dark-mode .device-card {
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 5px var(--shadow-color);
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .device-card:hover {
+  box-shadow: 0 5px 15px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
+/* 设备卡片头部样式强化 */
+body.dark-mode .device-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-mode .device-status {
+  font-weight: bold;
+}
+
+/* 设备信息项样式强化 */
+body.dark-mode .device-info-item div:last-child {
+  color: var(--text-color);
+}
+
+/* 账号列表样式强化 */
+body.dark-mode .account-item {
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .account-item:hover {
+  background-color: var(--hover-color);
+}
+
+body.dark-mode .account-item.selected {
+  background-color: rgba(30, 136, 229, 0.2);
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .account-item-description {
+  color: var(--text-color-secondary);
+}
+
+/* 设备卡片加载状态强化 */
+body.dark-mode .device-card-loading {
+  background: rgba(18, 18, 18, 0.9);
+}
+
+/* 设备详情弹窗强化 */
+body.dark-mode .device-detail-modal .modal-content {
+  background-color: var(--card-bg);
+}
+
+/* 列表项强化 */
+body.dark-mode .list-group-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+/* 警告框强化 */
+body.dark-mode .alert-warning {
+  background-color: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.3);
+  color: #ffda6a;
+}
+
+body.dark-mode .alert-info {
+  background-color: rgba(23, 162, 184, 0.2);
+  border-color: rgba(23, 162, 184, 0.3);
+  color: #6edff6;
+}
+
+/* 主题切换器样式增强 */
+body.dark-mode .theme-switcher .theme-option {
+  color: var(--text-color);
+  background-color: var(--card-bg);
+}
+
+body.dark-mode .theme-switcher .theme-option.active {
+  background-color: var(--primary-color);
+  color: #000;
+  font-weight: bold;
+}
+
+/* 表格样式增强 */
+body.dark-mode .table {
+  color: var(--text-color);
+}
+
+body.dark-mode .table th,
+body.dark-mode .table td {
+  border-color: var(--border-color);
+}
+
+/* 确保在暗色模式下卡片内容有对比度 */
+body.dark-mode .card {
+  background-color: var(--card-bg);
+}
+
+body.dark-mode .card-title {
+  color: var(--primary-color-light);
+}
+
+/* 暗色模式下按钮文字对比度增强 */
+body.dark-mode .btn-primary,
+body.dark-mode .btn-danger,
+body.dark-mode .btn-success,
+body.dark-mode .btn-warning {
+  color: #ffffff;
+}
+
+/* 暗色模式下操作按钮样式调整 */
+body.dark-mode .btn-check,
+body.dark-mode .btn-register,
+body.dark-mode .btn-logout,
+body.dark-mode .btn-delete {
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}

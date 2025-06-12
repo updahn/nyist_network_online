@@ -1,5 +1,7 @@
 # .vscode
 .vscode/
 __pycache__/
-setting2.ini
 *.log
+*.db
+*.ini
+data/

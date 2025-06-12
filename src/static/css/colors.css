@@ -1,0 +1,145 @@
+/* 统一颜色变量声明 */
+:root {
+  /* 主色调 */
+  --primary-color: #1e88e5;
+  --primary-color-dark: #1976d2;
+  --primary-color-light: #4a9ef1;
+  --secondary-color: #03dac6;
+  --secondary-color-dark: #02b8a7;
+  --secondary-color-light: #84ffff;
+
+  /* 校园网特殊颜色 */
+  --nav-bg-color: #1e88e5; /* 导航栏背景色 */
+  --nav-text-color: #ffffff; /* 导航栏文字颜色 */
+  --logo-text-color: #ffffff; /* Logo文字颜色 */
+  --nav-hover-bg-color: rgba(255, 255, 255, 0.15); /* 导航链接悬停背景 */
+  --nav-active-bg-color: rgba(255, 255, 255, 0.25); /* 导航链接激活背景 */
+
+  /* 状态颜色 */
+  --success-color: #43a047;
+  --success-color-dark: #388e3c;
+  --success-color-light: #a5d6a7;
+  --danger-color: #e53935;
+  --danger-color-dark: #d32f2f;
+  --danger-color-light: #ef9a9a;
+  --warning-color: #ff9800;
+  --warning-color-dark: #e68a00;
+  --warning-color-light: #ffcc80;
+  --info-color: #29b6f6;
+  --info-color-dark: #0288d1;
+  --info-color-light: #81d4fa;
+
+  /* 背景颜色 */
+  --bg-color-light: #f5f5f5;
+  --bg-color-dark: #121212;
+  --card-bg-light: #ffffff;
+  --card-bg-dark: #1e1e1e;
+  --input-bg-light: #ffffff;
+  --input-bg-dark: #2a2a2a;
+  --header-bg-light: #ffffff;
+  --header-bg-dark: #1a1a1a;
+  --modal-overlay-bg: rgba(0, 0, 0, 0.65); /* 模态框遮罩背景 */
+  --spinner-border-color: rgba(0, 0, 0, 0.1); /* 加载动画边框颜色 */
+  --primary-color-shadow: rgba(30, 136, 229, 0.2); /* 主色调阴影 */
+  --device-loading-bg: rgba(0, 0, 0, 0.7); /* 设备加载遮罩背景 */
+
+  /* 文字颜色 */
+  --text-color-light: #333333;
+  --text-color-secondary-light: #666666;
+  --text-color-tertiary-light: #999999;
+  --text-color-dark: #e0e0e0;
+  --text-color-secondary-dark: #b0b0b0;
+  --text-color-tertiary-dark: #7e7e7e;
+
+  /* 边框颜色 */
+  --border-color-light: #e0e0e0;
+  --border-color-dark: #333333;
+
+  /* 交互状态颜色 */
+  --hover-color-light: #f9f9f9;
+  --hover-color-dark: #2c2c2c;
+  --active-color-light: #e3f2fd;
+  --active-color-dark: #3c3c3c;
+
+  /* 阴影颜色 */
+  --shadow-color-light: rgba(0, 0, 0, 0.1);
+  --shadow-color-dark: rgba(0, 0, 0, 0.5);
+
+  /* 状态背景色 */
+  --status-online-bg-light: #e8f5e9;
+  --status-online-color-light: #388e3c;
+  --status-offline-bg-light: #ffebee;
+  --status-offline-color-light: #d32f2f;
+  --status-online-bg-dark: rgba(56, 142, 60, 0.3);
+  --status-online-color-dark: #4caf50;
+  --status-offline-bg-dark: rgba(211, 47, 47, 0.3);
+  --status-offline-color-dark: #f44336;
+
+  /* 警告信息背景 */
+  --alert-success-bg-light: #dff0d8;
+  --alert-success-color-light: #3c763d;
+  --alert-danger-bg-light: #f2dede;
+  --alert-danger-color-light: #a94442;
+  --alert-warning-bg-light: #fcf8e3;
+  --alert-warning-color-light: #8a6d3b;
+  --alert-info-bg-light: #d9edf7;
+  --alert-info-color-light: #31708f;
+  --alert-success-bg-dark: rgba(40, 167, 69, 0.2);
+  --alert-success-color-dark: #8fd19e;
+  --alert-danger-bg-dark: rgba(220, 53, 69, 0.2);
+  --alert-danger-color-dark: #ea868f;
+  --alert-warning-bg-dark: rgba(255, 193, 7, 0.2);
+  --alert-warning-color-dark: #ffda6a;
+  --alert-info-bg-dark: rgba(23, 162, 184, 0.2);
+  --alert-info-color-dark: #6edff6;
+
+  /* 表格相关颜色 */
+  --table-header-bg-light: #f5f5f5;
+  --table-header-bg-dark: #2a2a2a;
+  --table-border-light: #ddd;
+  --table-border-dark: #333;
+  --table-hover-bg-light: #f9f9f9;
+  --table-hover-bg-dark: #3c3c3c;
+
+  /* 操作按钮颜色 */
+  --btn-check-bg: #1e88e5; /* 检查按钮 */
+  --btn-register-bg: #43a047; /* 登录按钮 */
+  --btn-logout-bg: #ff9800; /* 退出按钮 */
+  --btn-delete-bg: #e53935; /* 删除按钮 */
+  --btn-text-color: #ffffff; /* 按钮文字颜色 */
+}
+
+/* 亮色主题默认变量 (这些变量会在body.dark-mode中被覆盖) */
+:root {
+  /* 使用亮色主题颜色作为默认值 */
+  --bg-color: var(--bg-color-light);
+  --card-bg: var(--card-bg-light);
+  --input-bg: var(--input-bg-light);
+  --header-bg: var(--header-bg-light);
+  --text-color: var(--text-color-light);
+  --text-color-secondary: var(--text-color-secondary-light);
+  --text-color-tertiary: var(--text-color-tertiary-light);
+  --border-color: var(--border-color-light);
+  --hover-color: var(--hover-color-light);
+  --active-color: var(--active-color-light);
+  --shadow-color: var(--shadow-color-light);
+  --table-header-bg: var(--table-header-bg-light);
+  --table-border: var(--table-border-light);
+  --table-hover-bg: var(--table-hover-bg-light);
+
+  /* 状态标签颜色 */
+  --status-online-bg: var(--status-online-bg-light);
+  --status-online-color: var(--status-online-color-light);
+  --status-offline-bg: var(--status-offline-bg-light);
+  --status-offline-color: var(--status-offline-color-light);
+
+  /* 警告信息背景 */
+  --alert-success-bg: var(--alert-success-bg-light);
+  --alert-success-color: var(--alert-success-color-light);
+  --alert-danger-bg: var(--alert-danger-bg-light);
+  --alert-danger-color: var(--alert-danger-color-light);
+  --alert-warning-bg: var(--alert-warning-bg-light);
+  --alert-warning-color: var(--alert-warning-color-light);
+  --alert-info-bg: var(--alert-info-bg-light);
+  --alert-info-color: var(--alert-info-color-light);
+}

@@ -1,0 +1,1075 @@
+{% extends "base.html" %} {% block content %}
+<link rel="stylesheet" href="{{ PRE_URL }}/static/css/dashboard.css" />
+
+<div class="card" style="width: 100%">
+  <div class="card-title" style="display: flex; justify-content: space-between; align-items: center">
+    <span>我的设备</span>
+    <div>
+      <button id="btnAddDevice" class="btn btn-primary">添加设备</button>
+      <button id="btnRefreshDevices" class="btn btn-success">刷新设备</button>
+    </div>
+  </div>
+
+  <!-- 添加加载状态显示 -->
+  <div id="loadingIndicator">
+    <div class="spinner"></div>
+    <p>正在加载设备信息...</p>
+  </div>
+
+  <div id="deviceList" class="device-grid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px">
+    {% if devices %} {% for device in devices %}
+    <div class="device-card" data-id="{{ device.id }}">
+      <!-- 添加设备卡片加载状态 -->
+      <div class="device-card-loading">
+        <div class="spinner"></div>
+      </div>
+      <div class="device-header">
+        <div class="device-name">
+          {{ device.name }} <button class="btn-edit-name"><i class="edit-icon">✎</i></button>
+        </div>
+        <div class="device-status {% if device.is_online %}status-online{% else %}status-offline{% endif %}">{% if device.is_online %}在线{% else %}离线{% endif %}</div>
+      </div>
+      <div class="device-info">
+        <div class="device-info-item">
+          <div class="device-info-label">IPv4:</div>
+          <div>{{ device.ipv4 }}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">IPv6:</div>
+          <div>{{ device.ipv6 }}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">最后在线时间:</div>
+          <div class="datetime" data-date="{{ device.last_online_time }}">{{ device.last_online_time }}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">已用流量:</div>
+          <div>{{ device.used_bytes }}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">已用时长:</div>
+          <div>{{ device.used_second }}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">使用账号:</div>
+          <div style="display: flex; align-items: center">
+            <span style="margin-right: 5px">{{ device.username if device.username else '未设置' }}</span>
+            <button class="btn-select-account" data-device-id="{{ device.id }}"><i class="edit-icon">✎</i></button>
+          </div>
+        </div>
+      </div>
+      <div class="device-actions" style="display: flex; justify-content: space-between">
+        <div class="action-group">
+          <button class="btn btn-primary btn-check-device">检查</button>
+          <button class="btn btn-success btn-login-device">登录</button>
+          <button class="btn btn-danger btn-logout-device">退出</button>
+          <button class="btn btn-danger btn-delete-device">删除</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %} {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 50px 0">
+      <p>没有找到设备。请点击"添加设备"或"刷新设备"按钮。</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 添加设备模态框 -->
+<div id="addDeviceModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">添加设备</h3>
+      <span class="close" style="cursor: pointer; font-size: 24px">&times;</span>
+    </div>
+    <form id="addDeviceForm">
+      <div class="form-group">
+        <label for="deviceName">设备名称</label>
+        <input type="text" class="form-control" id="deviceName" placeholder="输入设备名称" required />
+      </div>
+      <div class="form-group">
+        <label for="deviceIp">设备IP地址</label>
+        <input type="text" class="form-control" id="deviceIp" placeholder="输入IPv4地址" required />
+      </div>
+      <button type="submit" id="btnSaveDevice" class="btn btn-primary" style="width: 100%">保存</button>
+    </form>
+  </div>
+</div>
+
+<!-- 修改设备名称模态框 -->
+<div id="editNameModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">修改设备名称</h3>
+      <span class="close-edit-modal" style="cursor: pointer; font-size: 24px">&times;</span>
+    </div>
+    <div class="form-group">
+      <label for="editDeviceName">新设备名称</label>
+      <input type="text" class="form-control" id="editDeviceName" placeholder="输入新设备名称" />
+    </div>
+    <input type="hidden" id="editDeviceId" value="" />
+    <button id="btnSaveDeviceName" class="btn btn-primary" style="width: 100%">保存</button>
+  </div>
+</div>
+
+<!-- 选择校园网账号模态框 -->
+<div id="selectAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 id="selectAccountModalTitle" style="margin: 0">选择校园网账号</h3>
+      <span class="close-select-account-modal" style="cursor: pointer; font-size: 24px">&times;</span>
+    </div>
+    <div id="selectAccountList" class="account-list"></div>
+    <input type="hidden" id="selectedDeviceId" value="" />
+    <button id="btnConfirmSelectAccount" class="btn btn-primary" style="width: 100%; margin-top: 20px">确认</button>
+  </div>
+</div>
+
+<!-- 修改设备账号登录模态框 -->
+<div id="modifyAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">修改设备账号登录</h3>
+      <span class="close-modify-account-modal" style="cursor: pointer; font-size: 24px">&times;</span>
+    </div>
+    <div id="modifyAccountList" class="account-list"></div>
+    <input type="hidden" id="modifyDeviceId" value="" />
+    <button id="btnConfirmModifyAccount" class="btn btn-primary" style="width: 100%; margin-top: 20px">确认</button>
+  </div>
+</div>
+
+<!-- 添加校园网账号模态框 -->
+<div id="editAccountModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 id="accountModalTitle" style="margin: 0">添加校园网账号</h3>
+      <span class="close-edit-account-modal" style="margin-left: 20px">&times;</span>
+    </div>
+    <form id="accountForm">
+      <div class="form-group">
+        <label for="accountUsername">账号</label>
+        <input type="text" class="form-control" id="accountUsername" placeholder="输入账号" required />
+      </div>
+      <div class="form-group">
+        <label for="accountPassword">密码</label>
+        <input type="password" class="form-control" id="accountPassword" placeholder="输入密码" required />
+      </div>
+      <div class="form-group">
+        <label for="accountDescription">描述</label>
+        <input type="text" class="form-control" id="accountDescription" placeholder="输入描述" />
+      </div>
+      <input type="hidden" id="accountId" value="" />
+      <input type="hidden" id="editMode" value="" />
+      <button type="submit" id="btnSaveAccount" class="btn btn-primary" style="width: 100%">保存</button>
+    </form>
+  </div>
+</div>
+
+<!-- 操作结果提示框 -->
+<div id="resultToast" class="toast">
+  <div id="toastContent" class="toast-content"></div>
+</div>
+
+<!-- 新增：删除确认模态框 -->
+<div id="deleteConfirmModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
+      <h3 style="margin: 0">确认删除</h3>
+      <span class="close-delete-confirm-modal" style="cursor: pointer; font-size: 24px">&times;</span>
+    </div>
+    <p>确定要删除这个设备吗？</p>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px">
+      <button id="btnCancelDelete" class="btn btn-secondary">取消</button>
+      <button id="btnConfirmDelete" class="btn btn-danger">删除</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script src="{{ PRE_URL }}/static/js/api.js"></script>
+<script src="{{ PRE_URL }}/static/js/utils.js"></script>
+<script type="text/javascript">
+  // 将服务器端传来的变量添加到JavaScript
+  var MAX_DEVICE_CONNECTIONS = Number('{{ max_device_connections }}');
+
+  // DOM元素
+  var addDeviceBtn = document.getElementById('btnAddDevice');
+  const refreshDevicesBtn = document.getElementById('btnRefreshDevices');
+  const addDeviceModal = document.getElementById('addDeviceModal');
+  const editNameModal = document.getElementById('editNameModal');
+  const selectAccountModal = document.getElementById('selectAccountModal');
+  const modifyAccountModal = document.getElementById('modifyAccountModal');
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  const closeBtn = document.querySelector('.close');
+  const closeEditBtn = document.querySelector('.close-edit-modal');
+  const closeSelectAccountBtn = document.querySelector('.close-select-account-modal');
+  const closeModifyAccountBtn = document.querySelector('.close-modify-account-modal');
+  const closeDeleteConfirmBtn = document.querySelector('.close-delete-confirm-modal');
+  const saveDeviceBtn = document.getElementById('btnSaveDevice');
+  const saveDeviceNameBtn = document.getElementById('btnSaveDeviceName');
+  const confirmSelectAccountBtn = document.getElementById('btnConfirmSelectAccount');
+  const deviceList = document.getElementById('deviceList');
+
+  // 添加设备按钮点击事件
+  addDeviceBtn.addEventListener('click', function () {
+    // 重置表单
+    document.getElementById('addDeviceForm').reset();
+    // 显示模态框
+    addDeviceModal.style.display = 'block';
+  });
+
+  // 设备操作按钮事件委托
+  deviceList.addEventListener('click', async function (e) {
+    const target = e.target;
+    const targetBtn = target.closest('button');
+
+    if (!targetBtn) return;
+
+    const deviceCard = targetBtn.closest('.device-card');
+    const deviceId = deviceCard.dataset.id;
+    const deviceCardLoading = deviceCard.querySelector('.device-card-loading');
+
+    // 编辑设备名称
+    if (targetBtn.classList.contains('btn-edit-name') || (target.classList.contains('edit-icon') && target.parentElement.classList.contains('btn-edit-name'))) {
+      const deviceName = deviceCard.querySelector('.device-name').textContent.trim().replace('✎', '').trim();
+      document.getElementById('editDeviceName').value = deviceName;
+      document.getElementById('editDeviceId').value = deviceId;
+      editNameModal.style.display = 'block';
+      return;
+    }
+
+    // 选择校园网账号
+    if (targetBtn.classList.contains('btn-select-account') || (target.classList.contains('edit-icon') && target.parentElement.classList.contains('btn-select-account'))) {
+      document.getElementById('selectedDeviceId').value = deviceId;
+      Utils.setButtonLoading(targetBtn, true);
+
+      try {
+        await loadAccounts(targetBtn);
+      } catch (error) {
+        Utils.showErrorToast('获取可用校园网账号失败: ' + error.message);
+      } finally {
+        Utils.setButtonLoading(targetBtn, false);
+      }
+      return;
+    }
+
+    // 检查状态
+    if (targetBtn.classList.contains('btn-check-device')) {
+      Utils.setButtonLoading(targetBtn, true);
+      deviceCardLoading.classList.add('loading');
+
+      try {
+        const data = await API.devices.checkDevice(deviceId);
+        updateDeviceCardStatus(deviceCard, data);
+
+        if (data.success) {
+          Utils.showSuccessToast('设备状态检查成功');
+        } else {
+          Utils.showErrorToast(data.message || '检查状态失败');
+        }
+      } catch (error) {
+        Utils.showErrorToast('检查状态失败: ' + error.message);
+      } finally {
+        Utils.setButtonLoading(targetBtn, false);
+        deviceCardLoading.classList.remove('loading');
+      }
+      return;
+    }
+
+    // 登录设备
+    if (targetBtn.classList.contains('btn-login-device')) {
+      Utils.setButtonLoading(targetBtn, true);
+      deviceCardLoading.classList.add('loading');
+
+      try {
+        const data = await API.devices.loginDevice(deviceId);
+
+        if (data.success) {
+          Utils.showSuccessToast(data.message);
+          // 登录成功后检查设备状态
+          const checkData = await API.devices.checkDevice(deviceId);
+          updateDeviceCardStatus(deviceCard, checkData);
+        } else {
+          Utils.showErrorToast(data.message || '登录失败');
+        }
+      } catch (error) {
+        Utils.showErrorToast('登录失败: ' + error.message);
+      } finally {
+        Utils.setButtonLoading(targetBtn, false);
+        deviceCardLoading.classList.remove('loading');
+      }
+      return;
+    }
+
+    // 退出设备
+    if (targetBtn.classList.contains('btn-logout-device')) {
+      Utils.setButtonLoading(targetBtn, true);
+      deviceCardLoading.classList.add('loading');
+
+      try {
+        const data = await API.devices.logoutDevice(deviceId);
+
+        console.log(data);
+        if (data.success) {
+          Utils.showSuccessToast(data.message);
+          // 退出成功后检查设备状态
+          const checkData = await API.devices.checkDevice(deviceId);
+          updateDeviceCardStatus(deviceCard, checkData);
+        } else {
+          Utils.showErrorToast(data.message || '退出失败');
+        }
+      } catch (error) {
+        Utils.showErrorToast('退出失败: ' + error.message);
+      } finally {
+        Utils.setButtonLoading(targetBtn, false);
+        deviceCardLoading.classList.remove('loading');
+      }
+      return;
+    }
+
+    // 删除设备
+    if (targetBtn.classList.contains('btn-delete-device')) {
+      pendingDeleteDeviceCard = deviceCard;
+      pendingDeleteDeviceId = deviceId;
+      pendingDeleteButton = targetBtn;
+      document.getElementById('deleteConfirmModal').style.display = 'block';
+      return;
+    }
+
+    // 修改设备账号并登录
+    if (targetBtn.classList.contains('btn-modify-account')) {
+      Utils.setButtonLoading(targetBtn, true);
+
+      try {
+        await loadAccountsForModify(deviceId, targetBtn);
+      } catch (error) {
+        Utils.showErrorToast('获取可用校园网账号失败: ' + error.message);
+      } finally {
+        Utils.setButtonLoading(targetBtn, false);
+      }
+      return;
+    }
+  });
+
+  // 确认选择校园网账号
+  confirmSelectAccountBtn.addEventListener('click', async function () {
+    const deviceId = document.getElementById('selectedDeviceId').value;
+    const selectedAccount = document.querySelector('input[name="account"]:checked');
+
+    if (!selectedAccount) {
+      Utils.showErrorToast('请选择一个校园网账号');
+      return;
+    }
+
+    const accountId = selectedAccount.value;
+    Utils.setButtonLoading(confirmSelectAccountBtn, true);
+
+    // 获取对应的设备卡片并显示加载状态
+    const deviceCard = document.querySelector(`.device-card[data-id="${deviceId}"]`);
+    const deviceCardLoading = deviceCard.querySelector('.device-card-loading');
+    deviceCardLoading.classList.add('loading');
+
+    try {
+      const data = await API.devices.updateDevice(deviceId, { network_account_id: accountId });
+
+      if (data.success) {
+        Utils.showSuccessToast('设置校园网账号成功');
+        selectAccountModal.style.display = 'none';
+
+        // 直接检查设备状态更新卡片内容，而不是刷新整个列表
+        const checkData = await API.devices.checkDevice(deviceId);
+        updateDeviceCardStatus(deviceCard, checkData);
+      } else {
+        Utils.showErrorToast('设置校园网账号失败: ' + data.message);
+      }
+    } catch (error) {
+      Utils.showErrorToast('设置校园网账号失败: ' + error.message);
+    } finally {
+      Utils.setButtonLoading(confirmSelectAccountBtn, false);
+      deviceCardLoading.classList.remove('loading');
+    }
+  });
+
+  // 确认修改设备账号
+  document.getElementById('btnConfirmModifyAccount').addEventListener('click', async function () {
+    const deviceId = document.getElementById('modifyDeviceId').value;
+    const selectedAccount = document.querySelector('#modifyAccountList input[name="account"]:checked');
+
+    if (!selectedAccount) {
+      Utils.showErrorToast('请选择一个校园网账号');
+      return;
+    }
+
+    const accountId = selectedAccount.value;
+    Utils.setButtonLoading(this, true);
+
+    // 获取对应的设备卡片并显示加载状态
+    const deviceCard = document.querySelector(`.device-card[data-id="${deviceId}"]`);
+    const deviceCardLoading = deviceCard.querySelector('.device-card-loading');
+    deviceCardLoading.classList.add('loading');
+
+    try {
+      // 获取设备信息，检查当前状态
+      const deviceData = await API.devices.checkDevice(deviceId);
+
+      if (deviceData.success) {
+        const device = deviceData.device;
+
+        // 如果设备当前在线，先登出
+        if (device.is_online) {
+          const logoutData = await API.devices.logoutDevice(deviceId);
+
+          if (!logoutData.success) {
+            Utils.showErrorToast('登出当前账号失败: ' + logoutData.message);
+            deviceCardLoading.classList.remove('loading');
+            return;
+          }
+        }
+
+        // 使用新账号登录
+        const setAccountData = await API.devices.updateDevice(deviceId, { network_account_id: accountId });
+
+        if (setAccountData.success) {
+          // 设置账号后，登录设备
+          const loginData = await API.devices.loginDevice(deviceId);
+
+          if (loginData.success) {
+            Utils.showSuccessToast('修改账号并登录成功');
+            modifyAccountModal.style.display = 'none';
+
+            // 直接检查设备状态更新卡片内容，而不是刷新整个列表
+            const checkData = await API.devices.checkDevice(deviceId);
+            updateDeviceCardStatus(deviceCard, checkData);
+          } else {
+            Utils.showErrorToast('登录新账号失败: ' + loginData.message);
+          }
+        } else {
+          Utils.showErrorToast('设置新账号失败: ' + setAccountData.message);
+        }
+      } else {
+        Utils.showErrorToast('获取设备信息失败: ' + deviceData.message);
+      }
+    } catch (error) {
+      Utils.showErrorToast('修改账号失败: ' + error.message);
+    } finally {
+      Utils.setButtonLoading(this, false);
+      deviceCardLoading.classList.remove('loading');
+    }
+  });
+
+  // 添加设备
+  document.getElementById('addDeviceForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const deviceName = document.getElementById('deviceName').value.trim();
+    const deviceIp = document.getElementById('deviceIp').value.trim();
+
+    if (!deviceName || !deviceIp) {
+      Utils.showErrorToast('请填写完整信息');
+      return;
+    }
+
+    Utils.setButtonLoading(document.getElementById('btnSaveDevice'), true);
+
+    try {
+      const data = await API.devices.addDevice({
+        name: deviceName,
+        ipv4: deviceIp,
+      });
+
+      if (data.success) {
+        Utils.showSuccessToast('设备添加成功');
+        addDeviceModal.style.display = 'none';
+
+        // 获取新添加的设备信息
+        const deviceData = await API.devices.getDevices();
+
+        if (deviceData.success) {
+          // 如果添加前没有设备，需要清空"没有找到设备"的提示内容
+          if (document.querySelectorAll('.device-card').length === 0) {
+            deviceList.innerHTML = '';
+          }
+
+          // 找到刚刚添加的设备（一般是最后一个）
+          const newDevice = deviceData.devices[deviceData.devices.length - 1];
+
+          // 创建新设备卡片并添加到列表
+          const deviceCard = createDeviceCard(newDevice);
+          deviceList.appendChild(deviceCard);
+
+          // 更新日期时间格式
+          applyDateTimeFormatting();
+
+          // 确保设备列表可见
+          document.getElementById('loadingIndicator').style.display = 'none';
+          document.getElementById('deviceList').style.display = 'grid';
+        } else {
+          Utils.showErrorToast('获取新设备信息失败');
+        }
+      } else {
+        Utils.showErrorToast('添加设备失败: ' + data.message);
+      }
+    } catch (error) {
+      Utils.showErrorToast('添加设备失败: ' + error.message);
+    } finally {
+      Utils.setButtonLoading(document.getElementById('btnSaveDevice'), false);
+    }
+  });
+
+  // 创建设备卡片的函数
+  function createDeviceCard(device) {
+    const deviceCard = document.createElement('div');
+    deviceCard.className = 'device-card';
+    deviceCard.dataset.id = device.id;
+
+    deviceCard.innerHTML = `
+      <!-- 添加设备卡片加载状态 -->
+      <div class="device-card-loading">
+        <div class="spinner"></div>
+      </div>
+      <div class="device-header">
+        <div class="device-name">
+          ${device.name} <button class="btn-edit-name"><i class="edit-icon">✎</i></button>
+        </div>
+        <div class="device-status ${device.is_online ? 'status-online' : 'status-offline'}">${device.is_online ? '在线' : '离线'}</div>
+      </div>
+      <div class="device-info">
+        <div class="device-info-item">
+          <div class="device-info-label">IPv4:</div>
+          <div>${device.ipv4}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">IPv6:</div>
+          <div>${device.ipv6 || ''}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">最后在线时间:</div>
+          <div class="datetime" data-date="${device.last_online_time}">${device.last_online_time}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">已用流量:</div>
+          <div>${device.used_bytes || '0'}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">已用时长:</div>
+          <div>${device.used_second || '0'}</div>
+        </div>
+        <div class="device-info-item">
+          <div class="device-info-label">使用账号:</div>
+          <div style="display: flex; align-items: center">
+            <span style="margin-right: 5px">${device.username || '未设置'}</span>
+            <button class="btn-select-account" data-device-id="${device.id}"><i class="edit-icon">✎</i></button>
+          </div>
+        </div>
+      </div>
+      <div class="device-actions" style="display: flex; justify-content: space-between">
+        <div class="action-group">
+          <button class="btn btn-primary btn-check-device">检查</button>
+          <button class="btn btn-success btn-login-device">登录</button>
+          <button class="btn btn-danger btn-logout-device">退出</button>
+          <button class="btn btn-danger btn-delete-device">删除</button>
+        </div>
+      </div>
+    `;
+
+    return deviceCard;
+  }
+
+  // 刷新设备
+  async function refreshDevicesList() {
+    Utils.setButtonLoading(refreshDevicesBtn, true);
+    refreshDevicesBtn.classList.add('btn-refresh-rotating');
+
+    // 显示所有设备的加载状态
+    document.querySelectorAll('.device-card-loading').forEach((loading) => {
+      loading.classList.add('loading');
+    });
+
+    try {
+      const data = await API.devices.refreshDevices();
+
+      if (data.success) {
+        // 重新获取设备列表
+        await updateDeviceStatus();
+
+        // 确保所有设备卡片的加载状态被隐藏
+        document.querySelectorAll('.device-card-loading').forEach((loading) => {
+          loading.classList.remove('loading');
+        });
+      } else {
+        Utils.showErrorToast('刷新设备失败: ' + data.message);
+        // 隐藏所有设备的加载状态
+        document.querySelectorAll('.device-card-loading').forEach((loading) => {
+          loading.classList.remove('loading');
+        });
+      }
+    } catch (error) {
+      Utils.showErrorToast('刷新设备失败: ' + error.message);
+      // 隐藏所有设备的加载状态
+      document.querySelectorAll('.device-card-loading').forEach((loading) => {
+        loading.classList.remove('loading');
+      });
+    } finally {
+      Utils.setButtonLoading(refreshDevicesBtn, false);
+      refreshDevicesBtn.classList.remove('btn-refresh-rotating');
+    }
+  }
+
+  // 更新设备状态
+  async function updateDeviceStatus() {
+    try {
+      const data = await API.devices.getDevices();
+
+      if (data.success) {
+        updateDeviceCards(data.devices);
+        // 重新格式化时间
+        applyDateTimeFormatting();
+
+        // 隐藏加载指示器，显示设备列表
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('deviceList').style.display = 'grid';
+
+        // 确保所有设备卡片的加载状态被隐藏
+        document.querySelectorAll('.device-card-loading').forEach((loading) => {
+          loading.classList.remove('loading');
+        });
+      }
+    } catch (error) {
+      console.error('获取设备状态失败:', error.message);
+      // 发生错误时也显示设备列表，避免用户看到无限加载
+      document.getElementById('loadingIndicator').style.display = 'none';
+      document.getElementById('deviceList').style.display = 'grid';
+
+      // 确保所有设备卡片的加载状态被隐藏
+      document.querySelectorAll('.device-card-loading').forEach((loading) => {
+        loading.classList.remove('loading');
+      });
+    }
+  }
+
+  // 保存设备名称
+  saveDeviceNameBtn.onclick = async function () {
+    const deviceName = document.getElementById('editDeviceName').value.trim();
+    const deviceId = document.getElementById('editDeviceId').value;
+
+    if (!deviceName) {
+      Utils.showErrorToast('请输入设备名称');
+      return;
+    }
+
+    Utils.setButtonLoading(saveDeviceNameBtn, true);
+
+    // 获取对应的设备卡片并显示加载状态
+    const deviceCard = document.querySelector(`.device-card[data-id="${deviceId}"]`);
+    const deviceCardLoading = deviceCard.querySelector('.device-card-loading');
+    deviceCardLoading.classList.add('loading');
+
+    try {
+      const data = await API.devices.updateDevice(deviceId, { name: deviceName });
+
+      if (data.success) {
+        Utils.showSuccessToast('设备名称修改成功');
+        editNameModal.style.display = 'none';
+
+        // 更新设备名称
+        const deviceNameElement = deviceCard.querySelector('.device-name');
+        deviceNameElement.innerHTML = deviceName + ' <button class="btn-edit-name"><i class="edit-icon">✎</i></button>';
+
+        // 直接检查设备状态更新卡片内容，而不是刷新整个列表
+        const checkData = await API.devices.checkDevice(deviceId);
+        updateDeviceCardStatus(deviceCard, checkData);
+      } else {
+        Utils.showErrorToast(data.message || '修改设备名称失败');
+      }
+    } catch (error) {
+      Utils.showErrorToast('修改设备名称失败: ' + error.message);
+    } finally {
+      Utils.setButtonLoading(saveDeviceNameBtn, false);
+      deviceCardLoading.classList.remove('loading');
+    }
+  };
+
+  // 从服务器加载账号列表，并在弹窗前检查所有账号状态
+  async function loadAccounts(targetBtn) {
+    try {
+      // 使用通用API获取账号列表
+      const data = await API.accounts.getAccounts();
+
+      if (data.success) {
+        renderAccountList(data.accounts);
+      } else {
+        Utils.showErrorToast('获取可用校园网账号失败: ' + data.message);
+      }
+    } catch (error) {
+      Utils.showErrorToast('获取可用校园网账号失败: ' + error.message);
+    }
+
+    // 渲染账号选择列表
+    function renderAccountList(accounts) {
+      const accountListDiv = document.getElementById('selectAccountList');
+      accountListDiv.innerHTML = '';
+
+      if (accounts.length === 0) {
+        accountListDiv.innerHTML = '<p>没有可用的校园网账号</p>';
+      } else {
+        accounts.forEach((account) => {
+          const accountDiv = document.createElement('div');
+          accountDiv.className = 'account-item';
+          accountDiv.innerHTML = `
+            <input type="radio" name="account" value="${account.id}" id="account-${account.id}"
+              ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'disabled' : ''}>
+            <label for="account-${account.id}" ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'class="disabled"' : ''}>
+              ${account.username} (${account.description || '无描述'})
+              - 在线设备: ${account.online_devices_count}/${MAX_DEVICE_CONNECTIONS}
+              ${account.is_default ? ' (默认)' : ''}
+            </label>
+          `;
+          accountListDiv.appendChild(accountDiv);
+        });
+      }
+
+      // 设置弹窗标题
+      document.getElementById('selectAccountModalTitle').textContent = '选择校园网账号';
+      // 显示模态框
+      selectAccountModal.style.display = 'block';
+    }
+  }
+
+  // 格式化日期时间函数
+  function formatDateTime(dateTimeStr) {
+    return Utils.formatDateTime(dateTimeStr);
+  }
+
+  // 应用日期时间格式化
+  function applyDateTimeFormatting() {
+    document.querySelectorAll('.datetime').forEach((element) => {
+      const dateStr = element.getAttribute('data-date');
+      if (dateStr) {
+        element.textContent = formatDateTime(dateStr);
+      }
+    });
+  }
+
+  // 处理获取可用账号的部分
+  async function loadAccountsForModify(deviceId, btnElement) {
+    try {
+      // 使用通用API获取账号列表
+      const data = await API.accounts.getAccounts();
+
+      if (data.success) {
+        const accountListDiv = document.getElementById('modifyAccountList');
+        accountListDiv.innerHTML = '';
+
+        if (data.accounts.length === 0) {
+          accountListDiv.innerHTML = '<p>没有可用的校园网账号</p>';
+        } else {
+          data.accounts.forEach((account) => {
+            const accountDiv = document.createElement('div');
+            accountDiv.className = 'account-item';
+            accountDiv.innerHTML = `
+              <input type="radio" name="account" value="${account.id}" id="modify-account-${account.id}"
+                ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'disabled' : ''}>
+              <label for="modify-account-${account.id}" ${account.online_devices_count >= MAX_DEVICE_CONNECTIONS ? 'class="disabled"' : ''}>
+                ${account.username} (${account.description || '无描述'})
+                - 在线设备: ${account.online_devices_count}/${MAX_DEVICE_CONNECTIONS}
+                ${account.is_default ? ' (默认)' : ''}
+              </label>
+            `;
+            accountListDiv.appendChild(accountDiv);
+          });
+        }
+
+        // 设置设备ID
+        document.getElementById('modifyDeviceId').value = deviceId;
+
+        // 显示模态框
+        modifyAccountModal.style.display = 'block';
+      } else {
+        Utils.showErrorToast('获取可用校园网账号失败: ' + data.message);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  let pendingDeleteDeviceCard = null;
+  let pendingDeleteDeviceId = null;
+  let pendingDeleteButton = null;
+
+  // 页面加载完成后立即更新一次
+  document.addEventListener('DOMContentLoaded', function () {
+    // 格式化日期
+    applyDateTimeFormatting();
+
+    // 确保所有设备卡片的加载状态初始化为隐藏
+    document.querySelectorAll('.device-card-loading').forEach((loading) => {
+      loading.classList.remove('loading');
+    });
+
+    // 添加模态框关闭事件
+    closeBtn.addEventListener('click', function () {
+      addDeviceModal.style.display = 'none';
+      document.getElementById('addDeviceForm').reset();
+    });
+
+    closeEditBtn.addEventListener('click', function () {
+      editNameModal.style.display = 'none';
+      document.getElementById('editDeviceName').value = '';
+      document.getElementById('editDeviceId').value = '';
+    });
+
+    closeSelectAccountBtn.addEventListener('click', function () {
+      selectAccountModal.style.display = 'none';
+      document.getElementById('selectedDeviceId').value = '';
+    });
+
+    closeModifyAccountBtn.addEventListener('click', function () {
+      modifyAccountModal.style.display = 'none';
+      document.getElementById('modifyDeviceId').value = '';
+    });
+
+    document.querySelector('.close-edit-account-modal').addEventListener('click', function () {
+      editAccountModal.style.display = 'none';
+      document.getElementById('accountForm').reset();
+    });
+
+    closeDeleteConfirmBtn.addEventListener('click', function () {
+      deleteConfirmModal.style.display = 'none';
+      pendingDeleteDeviceCard = null;
+      pendingDeleteDeviceId = null;
+      pendingDeleteButton = null;
+    });
+
+    document.getElementById('btnCancelDelete').addEventListener('click', function () {
+      deleteConfirmModal.style.display = 'none';
+      pendingDeleteDeviceCard = null;
+      pendingDeleteDeviceId = null;
+      pendingDeleteButton = null;
+    });
+
+    document.getElementById('btnConfirmDelete').addEventListener('click', async function () {
+      if (!pendingDeleteDeviceId || !pendingDeleteDeviceCard) return;
+
+      const deviceCardLoading = pendingDeleteDeviceCard.querySelector('.device-card-loading');
+      deviceCardLoading.classList.add('loading');
+      Utils.setButtonLoading(this, true);
+
+      // 设置删除按钮的加载状态
+      if (pendingDeleteButton) {
+        Utils.setButtonLoading(pendingDeleteButton, true);
+      }
+
+      try {
+        const data = await API.devices.deleteDevice(pendingDeleteDeviceId);
+        if (data.success) {
+          pendingDeleteDeviceCard.remove();
+          Utils.showSuccessToast('设备删除成功');
+          if (document.querySelectorAll('.device-card').length === 0) {
+            updateDeviceStatus();
+          }
+        } else {
+          Utils.showErrorToast(data.message || '删除失败');
+          deviceCardLoading.classList.remove('loading');
+          if (pendingDeleteButton) {
+            Utils.setButtonLoading(pendingDeleteButton, false);
+          }
+        }
+      } catch (error) {
+        Utils.showErrorToast('删除失败: ' + error.message);
+        deviceCardLoading.classList.remove('loading');
+        if (pendingDeleteButton) {
+          Utils.setButtonLoading(pendingDeleteButton, false);
+        }
+      } finally {
+        Utils.setButtonLoading(this, false);
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        pendingDeleteDeviceCard = null;
+        pendingDeleteDeviceId = null;
+        pendingDeleteButton = null;
+      }
+    });
+
+    // 点击模态框外部关闭
+    window.onclick = function (event) {
+      if (event.target == editAccountModal) {
+        editAccountModal.style.display = 'none';
+        document.getElementById('accountForm').reset();
+      } else if (event.target == editNameModal) {
+        editNameModal.style.display = 'none';
+        document.getElementById('editDeviceName').value = '';
+        document.getElementById('editDeviceId').value = '';
+      } else if (event.target == selectAccountModal) {
+        selectAccountModal.style.display = 'none';
+        document.getElementById('selectedDeviceId').value = '';
+      } else if (event.target == addDeviceModal) {
+        addDeviceModal.style.display = 'none';
+        document.getElementById('addDeviceForm').reset();
+      } else if (event.target == modifyAccountModal) {
+        modifyAccountModal.style.display = 'none';
+        document.getElementById('modifyDeviceId').value = '';
+      } else if (event.target == deleteConfirmModal) {
+        deleteConfirmModal.style.display = 'none';
+        pendingDeleteDeviceCard = null;
+        pendingDeleteDeviceId = null;
+        pendingDeleteButton = null;
+      }
+    };
+
+    // 页面加载时调用一次更新设备状态
+    updateDeviceStatus();
+
+    // 绑定刷新按钮事件
+    refreshDevicesBtn.onclick = refreshDevicesList;
+
+    // 打开添加账号模态框
+    const addAccountBtn = document.querySelector('.btn-add-account');
+    if (addAccountBtn) {
+      addAccountBtn.addEventListener('click', function () {
+        // 重置表单
+        document.getElementById('accountForm').reset();
+        document.getElementById('accountId').value = '';
+        document.getElementById('editMode').value = 'add';
+
+        // 更新模态框标题
+        document.getElementById('accountModalTitle').textContent = '添加校园网账号';
+
+        // 显示模态框
+        editAccountModal.style.display = 'block';
+      });
+    }
+  });
+
+  // 根据响应更新单个设备卡片状态
+  function updateDeviceCardStatus(card, data) {
+    const statusElement = card.querySelector('.device-status');
+    if (data.success) {
+      statusElement.textContent = '在线';
+      statusElement.className = 'device-status status-online';
+    } else {
+      statusElement.textContent = '离线';
+      statusElement.className = 'device-status status-offline';
+    }
+
+    // 更新使用账号
+    const device = data.message;
+
+    // 更新IPv6
+    const ipv6Element = card.querySelector('.device-info-item:nth-child(2) div:last-child');
+    if (device.ipv6 && ipv6Element) {
+      ipv6Element.textContent = device.ipv6;
+    }
+
+    // 更新最后在线时间
+    const lastTimeElement = card.querySelector('.device-info-item:nth-child(3) div:last-child');
+    if (device.last_online_time && lastTimeElement) {
+      lastTimeElement.textContent = Utils.formatDateTime(device.last_online_time);
+    }
+
+    // 更新已用流量
+    const usedTrafficElement = card.querySelector('.device-info-item:nth-child(4) div:last-child');
+    if (device.used_bytes && usedTrafficElement) {
+      usedTrafficElement.textContent = device.used_bytes;
+    }
+
+    // 更新已用时长
+    const usedTimeElement = card.querySelector('.device-info-item:nth-child(5) div:last-child');
+    if (device.used_second && usedTimeElement) {
+      usedTimeElement.textContent = device.used_second;
+    }
+
+    // 更新使用账号
+    const usedAccountElement = card.querySelector('.device-info-item:nth-child(6) div:last-child span');
+    if (device.username && usedAccountElement) {
+      usedAccountElement.textContent = device.username;
+    }
+  }
+
+  // 更新设备卡片
+  function updateDeviceCards(devices) {
+    const deviceCards = document.querySelectorAll('.device-card');
+    deviceCards.forEach((card) => {
+      const deviceId = parseInt(card.dataset.id);
+      const device = devices.find((d) => d.id === deviceId);
+      if (device) {
+        // 更新状态
+        const statusElement = card.querySelector('.device-status');
+        if (device.is_online) {
+          statusElement.textContent = '在线';
+          statusElement.className = 'device-status status-online';
+        } else {
+          statusElement.textContent = '离线';
+          statusElement.className = 'device-status status-offline';
+        }
+
+        // 更新IPv6
+        const ipv6Element = card.querySelector('.device-info-item:nth-child(2) div:last-child');
+        ipv6Element.textContent = device.ipv6;
+
+        // 更新最后在线时间
+        const lastTimeElement = card.querySelector('.device-info-item:nth-child(3) div:last-child');
+        lastTimeElement.textContent = Utils.formatDateTime(device.last_online_time);
+
+        // 更新已用流量
+        const usedTrafficElement = card.querySelector('.device-info-item:nth-child(4) div:last-child');
+        usedTrafficElement.textContent = device.used_bytes;
+
+        // 更新已用时长
+        const usedTimeElement = card.querySelector('.device-info-item:nth-child(5) div:last-child');
+        usedTimeElement.textContent = device.used_second;
+
+        // 更新使用账号
+        const usedAccountElement = card.querySelector('.device-info-item:nth-child(6) div:last-child span');
+        if (usedAccountElement) {
+          usedAccountElement.textContent = device.username || '未设置';
+        }
+      }
+    });
+  }
+
+  // 保存校园网账号
+  document.getElementById('accountForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const username = document.getElementById('accountUsername').value.trim();
+    const password = document.getElementById('accountPassword').value.trim();
+    const description = document.getElementById('accountDescription').value.trim();
+    const accountId = document.getElementById('accountId').value;
+    const editMode = document.getElementById('editMode').value;
+
+    if (!username || !password) {
+      Utils.showErrorToast('请填写账号和密码');
+      return;
+    }
+
+    Utils.setButtonLoading(document.getElementById('btnSaveAccount'), true);
+
+    try {
+      let data;
+      if (editMode === 'add') {
+        data = await API.accounts.addAccount({
+          username,
+          password,
+          description,
+        });
+      } else {
+        data = await API.accounts.updateAccount(accountId, {
+          username,
+          password,
+          description,
+        });
+      }
+
+      if (data.success) {
+        Utils.showSuccessToast(editMode === 'add' ? '添加校园网账号成功' : '更新校园网账号成功');
+        editAccountModal.style.display = 'none';
+        // 重新获取设备列表
+        await updateDeviceStatus();
+      } else {
+        Utils.showErrorToast((editMode === 'add' ? '添加' : '更新') + '校园网账号失败: ' + data.message);
+      }
+    } catch (error) {
+      Utils.showErrorToast((editMode === 'add' ? '添加' : '更新') + '校园网账号失败: ' + error);
+    } finally {
+      Utils.setButtonLoading(document.getElementById('btnSaveAccount'), false);
+    }
+  });
+</script>
+{% endblock %}

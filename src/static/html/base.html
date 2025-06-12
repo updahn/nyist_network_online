@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="{{ PRE_URL }}/static/image/favicon.ico" type="image/x-icon" />
+    <title>校园网管理系统</title>
+    <link rel="stylesheet" href="{{ PRE_URL }}/static/css/base.css" />
+    <link rel="stylesheet" href="{{ PRE_URL }}/static/css/colors.css" />
+    <link rel="stylesheet" href="{{ PRE_URL }}/static/css/dark.css" />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <nav>
+      <div class="nav-container">
+        <div class="logo">校园网管理系统</div>
+        <div class="nav-links">
+          {% if current_user.is_authenticated %}
+          <a href="{{ url_for('main.dashboard') }}" class="nav-link">控制面板</a>
+          <a href="{{ url_for('main.admin') }}" class="nav-link">管理后台</a>
+          <a href="{{ url_for('main.profile') }}" class="nav-link">个人资料</a>
+          <a href="{{ url_for('main.logout') }}" class="nav-link">退出</a>
+          {% else %}
+          <a href="{{ url_for('main.login') }}" class="nav-link">登录</a>
+          <a href="{{ url_for('main.register') }}" class="nav-link">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+      <div class="alert {% if category == 'error' %}alert-danger{% elif category == 'success' %}alert-success{% else %}alert-{{ category }}{% endif %}">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+      <div class="theme-switcher-container">
+        <div class="theme-switcher">
+          <div class="theme-option active" data-theme="light">亮色</div>
+          <div class="theme-option" data-theme="dark">暗色</div>
+        </div>
+      </div>
+      <div style="text-align: center; padding: 20px 0; color: #666; font-size: 0.9rem">&copy; {{ current_year }} 2025 南阳理工校园网管理系统. 网站保留所有解释权利.</div>
+    </footer>
+
+    <script src="{{ PRE_URL }}/static/js/theme.js"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

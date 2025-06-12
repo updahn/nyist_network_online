@@ -1,6 +1,6 @@
 from functools import wraps
 
-from utils.logger import logger
+from src.utils.logger import logger
 
 
 def checkvars(varlist, errorinfo):

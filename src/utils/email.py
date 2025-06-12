@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 
-from utils.logger import logger
+from src.utils.logger import logger
 
 
 class Email:

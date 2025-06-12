@@ -4,10 +4,45 @@ import argparse
 import sys
 import time
 
-from manager.network import NetworkManager
-from utils.email import Email
-from utils.mac import Mac
-from utils.logger import logger
+from src.manager.network import NetworkManager
+from src.utils.email import Email
+from src.utils.mac import Mac
+from src.utils.logger import logger
+
+
+# 格式化日期时间为统一格式
+def format_date(date_obj=None):
+    """
+    将日期格式化为标准格式: YYYY-MM-DD HH:MM:SS
+    如果不传入参数，则使用当前时间
+    """
+    if date_obj is None:
+        return time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 如果是时间戳
+    if isinstance(date_obj, (int, float)):
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(date_obj))
+
+    # 如果是字符串，尝试解析
+    if isinstance(date_obj, str):
+        try:
+            # 尝试解析各种可能的日期格式
+            for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%Y年%m月%d日 %H:%M:%S"]:
+                try:
+                    dt = time.strptime(date_obj, fmt)
+                    return time.strftime("%Y-%m-%d %H:%M:%S", dt)
+                except ValueError:
+                    continue
+        except Exception:
+            pass
+
+        return date_obj
+
+    # 其他情况
+    try:
+        return date_obj.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(date_obj)
 
 
 class HeartBeat:
@@ -27,8 +62,8 @@ class HeartBeat:
         # 确保所有必需的节存在
         default_config = {
             "ACCOUNT": {
-                "username": "***",
-                "passwd": "***",
+                "username": "admin",
+                "passwd": "admin",
                 "ip": None,
             },
             "IP": {
@@ -167,19 +202,26 @@ class HeartBeat:
                 minutes_offline = 0
 
                 try:
-                    # 转换时间并计算时长
-                    offline_seconds = time.time() - time.mktime(
-                        time.strptime(last_online_time, "%Y-%m-%d %H:%M:%S")
-                    )
+                    # 尝试解析上次在线时间并计算时长
+                    for fmt in ["%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%Y年%m月%d日 %H:%M:%S"]:
+                        try:
+                            time_tuple = time.strptime(last_online_time, fmt)
+                            # 转换为标准格式
+                            last_online_time = time.strftime("%Y-%m-%d %H:%M:%S", time_tuple)
+                            # 计算离线时间
+                            offline_seconds = time.time() - time.mktime(time_tuple)
 
-                    # 计算小时、分钟、秒
-                    hours, remainder = divmod(offline_seconds, 3600)
-                    minutes, seconds = divmod(remainder, 60)
+                            # 计算小时、分钟、秒
+                            hours, remainder = divmod(offline_seconds, 3600)
+                            minutes, seconds = divmod(remainder, 60)
 
-                    minutes_offline = int(minutes)
-                    offline_duration_str = (
-                        f"{int(hours)}小时{int(minutes)}分钟{int(seconds)}秒"
-                    )
+                            minutes_offline = int(minutes)
+                            offline_duration_str = (
+                                f"{int(hours)}小时{int(minutes)}分钟{int(seconds)}秒"
+                            )
+                            break
+                        except ValueError:
+                            continue
 
                 except Exception as e:
                     self.update_config("IP", "last_online_time", "")
@@ -204,7 +246,7 @@ class HeartBeat:
             self.update_config("IP", "is_online", "1")
             # 更新上次在线时间
             self.update_config(
-                "IP", "last_online_time", time.strftime("%Y-%m-%d %H:%M:%S")
+                "IP", "last_online_time", format_date()
             )
 
 

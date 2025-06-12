@@ -1,0 +1,564 @@
+/* 管理界面样式 */
+@import url('colors.css');
+
+/* 后台标题 */
+.admin-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 2px solid var(--primary-color);
+  display: inline-block;
+}
+
+/* Tab样式 */
+.tabs {
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.tab-header {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  gap: 0.25rem;
+}
+
+.tab {
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+  color: var(--text-color);
+  font-weight: 500;
+  position: relative;
+  border-radius: 6px 6px 0 0;
+}
+
+.tab:hover {
+  background-color: var(--hover-color);
+  color: var(--primary-color);
+}
+
+.tab.active {
+  border-bottom: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+  background-color: var(--active-color);
+}
+
+.tab-pane {
+  display: none;
+  animation: fadeIn 0.3s;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 编辑按钮样式 */
+.btn-edit-name,
+.btn-select-account {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.375rem;
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  opacity: 0.7;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-edit-name:hover,
+.btn-select-account:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.edit-icon {
+  font-style: normal;
+}
+
+/* 确认模态框样式 */
+#confirmModal .modal-content {
+  max-width: 450px;
+  margin: 10% auto;
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: 0 5px 25px var(--shadow-color);
+}
+
+#confirmModal .btn-secondary {
+  background: var(--text-color-tertiary-dark);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+#confirmModal .btn-danger {
+  background: var(--danger-color);
+  color: var(--btn-text-color);
+}
+
+/* 添加表格加载状态样式 */
+.table-loading {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--text-color-secondary);
+}
+
+.table-loading .spinner {
+  margin-bottom: 1rem;
+}
+
+/* 校园网账号选择列表 */
+.account-list {
+  max-height: 350px;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--card-bg);
+}
+
+.account-list-title {
+  padding: 0.75rem 1rem;
+  background-color: var(--primary-color);
+  color: var(--btn-text-color);
+  font-weight: 500;
+  border-radius: 8px 8px 0 0;
+}
+
+.account-item {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.account-item:last-child {
+  border-bottom: none;
+}
+
+.account-item:hover {
+  background-color: var(--hover-color);
+}
+
+.account-item label {
+  margin-left: 0.75rem;
+  cursor: pointer;
+  flex: 1;
+  color: var(--text-color);
+}
+
+.account-item label.disabled {
+  color: var(--text-color-tertiary-dark);
+  cursor: not-allowed;
+}
+
+/* 刷新按钮 */
+.btn-refresh-table {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-right: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  transition: transform 0.3s;
+  border-radius: 50%;
+}
+
+.btn-refresh-table:hover {
+  transform: rotate(30deg);
+  background-color: var(--hover-color);
+}
+
+/* 分页控件样式 */
+.table-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  align-items: center;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-size-select {
+  height: 2.5rem;
+  margin-right: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 0.75rem;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  min-width: 5rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+}
+
+.btn-page {
+  height: 2.5rem;
+  min-width: 2.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: var(--text-color);
+}
+
+.btn-page:hover:not(:disabled) {
+  background-color: var(--hover-color);
+}
+
+.btn-page:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.btn-page:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.current-page {
+  height: 2.5rem;
+  min-width: 2.5rem;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--active-color);
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 数据表格增强 */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 15px var(--shadow-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.admin-table thead {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.875rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  border: none;
+}
+
+.admin-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clickable-row:hover {
+  background-color: var(--hover-color) !important;
+}
+
+.admin-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* 表格筛选组件 */
+.table-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  background-color: var(--card-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px var(--shadow-color);
+  align-items: flex-end;
+}
+
+.filter-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* 操作按钮列 */
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.table-actions .btn {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+/* 设备操作按钮组 */
+.device-action-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.device-action-group .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* 用户操作按钮组 */
+.user-action-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.user-action-group .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* 账号操作按钮组 */
+.account-action-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.account-action-group .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* 状态标签 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: var(--status-online-bg);
+  color: var(--status-online-color);
+}
+
+.status-badge.inactive {
+  background-color: var(--status-offline-bg);
+  color: var(--status-offline-color);
+}
+
+.status-badge.pending {
+  background-color: var(--alert-warning-bg);
+  color: var(--alert-warning-color);
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+  .table-filters {
+    gap: 0.5rem;
+  }
+
+  .filter-item {
+    min-width: 180px;
+  }
+
+  .card {
+    overflow-x: auto;
+    padding: 1.25rem 1rem;
+  }
+
+  .admin-table {
+    min-width: 700px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-header {
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex-grow: 1;
+    text-align: center;
+    padding: 0.625rem 0.75rem;
+  }
+
+  .table-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .page-size-select {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+
+  .table-pagination {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .table-filters {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+
+  .filter-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .admin-table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-table,
+  .admin-table thead,
+  .admin-table tbody,
+  .admin-table th,
+  .admin-table td,
+  .admin-table tr {
+    display: block;
+  }
+
+  .admin-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .admin-table tr {
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--card-bg) !important;
+  }
+
+  .admin-table td {
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    padding-left: 50%;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .admin-table td:before {
+    position: absolute;
+    top: 0.875rem;
+    left: 1rem;
+    width: 45%;
+    padding-right: 0.75rem;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 600;
+    content: attr(data-title);
+    color: var(--text-color-secondary);
+  }
+
+  .admin-table td:last-child {
+    border-bottom: none;
+  }
+
+  .table-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* 添加表格容器样式，确保表格可以横向滚动 */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-pagination-info {
+  background-color: var(--primary-color);
+  color: var(--btn-text-color);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-align: center;
+}

@@ -1,0 +1,10 @@
+{% extends "base.html" %} {% block content %}
+<div class="card" style="text-align: center">
+  <div class="card-title">500 服务器错误</div>
+  <div style="margin: 20px 0">服务器遇到了一个错误，请稍后再试</div>
+  <div>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">返回首页</a>
+    <a href="{{ url_for('main.login') }}" class="btn btn-primary">返回登录</a>
+  </div>
+</div>
+{% endblock %}
